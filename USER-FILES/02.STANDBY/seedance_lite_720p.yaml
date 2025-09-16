@@ -1,0 +1,44 @@
+# =============================================================================
+# Seedance Lite 720p Video Generation Profile
+# =============================================================================
+
+# Model configuration for Replicate
+Model:
+  # ByteDance Seedance 1.0 Lite - Fast text-to-video and image-to-video model
+  # Supports 5s or 10s videos at 480p and 720p resolution
+  endpoint: bytedance/seedance-1-lite
+  code-nickname: seedance-lite-720p
+
+# Pricing configuration (Replicate charges per second of compute)
+pricing:
+  # Seedance Lite pricing on Replicate (estimated - typically cheaper than Pro)
+  cost_per_second: 0.00225 # USD per second of compute time
+  # Alternative: cost per prediction (average for 5-10 second videos)
+  cost_per_prediction: 0.15 # USD per video generation
+
+# Duration configuration
+duration_type: seconds
+fps: 24
+duration_min: 3 # Minimum 5 seconds for this model
+duration_max: 12 # Maximum 10 seconds for this model
+duration_param_name: duration
+
+# Generation parameters for Seedance Lite model
+params:
+  # Resolution - 720p (also supports 480p)
+  resolution: "720p"
+
+  # Aspect ratio - standard widescreen
+  aspect_ratio: "16:9"
+
+  # Frame rate (24 fps is standard)
+  fps: 24
+
+  # Camera settings
+  camera_fixed: false # Allow dynamic camera movements
+
+  # Random seed (-1 for random, set specific value for reproducibility)
+  seed: -1
+  # Note: The 'prompt' field will be populated from input files
+  # Note: The 'image' field will be populated from input files for I2V mode
+  # Note: This model also supports 'last_frame_image' and 'reference_images' parameters

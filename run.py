@@ -19,6 +19,6 @@ if not venv_python.exists():
     print("Please create a virtual environment first: python3 -m venv venv")
     sys.exit(1)
 
-# Run the main module with the venv Python
-cmd = [str(venv_python), "-m", "src.main"] + sys.argv[1:]
+# Run the verbose main module with the venv Python
+cmd = [str(venv_python), "-m", "src.main_verbose"] + sys.argv[1:]
 sys.exit(subprocess.call(cmd))
