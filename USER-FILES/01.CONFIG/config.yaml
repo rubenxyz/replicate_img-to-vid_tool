@@ -1,0 +1,48 @@
+# =============================================================================
+# FAL VIDEO WRAPPER CONFIGURATION
+# =============================================================================
+# Simple configuration for the fal_client video wrapper
+# Personal tool - no edge cases for users that don't exist
+# =============================================================================
+
+# Basic wrapper settings
+wrapper:
+  # Request timeout in seconds (default: 300 for longer video generation)
+  #timeout: 300
+  
+  # Number of retry attempts for failed requests (default: 3)
+  max_retries: 3
+  
+  # Maximum time to wait for queued jobs in seconds (default: 1200 for video)
+  max_wait_time: 1200
+  
+  # Enable verbose logging for debugging (default: true)
+  verbose: true
+
+# Sequential processing settings
+queue:
+  # Delay in seconds when rate limited (default: 60)
+  rate_limit_retry_delay: 60
+
+# Video-specific settings
+video:
+  # Download chunk size for video files
+  download_chunk_size: 8192
+  
+  # Video output format
+  output_format: "mp4"
+  
+  # Default duration if not specified
+  default_num_frames: 121
+
+# Error notifications
+notifications:
+  # Send notification on failure (default: true)
+  on_failure: true
+  
+  # Send notification on success (default: false)
+  on_success: false
+
+# =============================================================================
+# END OF CONFIGURATION
+# =============================================================================

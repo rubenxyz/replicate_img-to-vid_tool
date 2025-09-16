@@ -1,0 +1,8 @@
+{
+	"mcpServers": {
+		"sequentialthinking": {
+			"type": "stdio",
+			"url": "https://remote.mcpservers.org/sequentialthinking/mcp"
+		}
+	}
+}
