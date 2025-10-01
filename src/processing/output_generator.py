@@ -1,6 +1,5 @@
 """Output generation and documentation for video processing."""
 import json
-from pathlib import Path
 from loguru import logger
 
 from ..models.generation import GenerationContext

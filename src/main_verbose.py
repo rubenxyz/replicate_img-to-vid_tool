@@ -1,6 +1,5 @@
 """Main entry point with verbose output enabled by default."""
 import sys
-from pathlib import Path
 from loguru import logger
 
 from .api.client import ReplicateClient
@@ -11,7 +10,7 @@ from .config.settings import (
 from .processing.verbose_processor import process_matrix_verbose
 from .models.processing import ProcessingContext
 from .output.reporter import create_success_report, create_cost_report
-from .reporting.adjustments_reporter import create_adjustments_report
+# Lazy import for adjustments_reporter - only loaded when needed
 from .utils.enhanced_logging import setup_dual_logging
 from .utils.verbose_output import log_stage_emoji
 from .validation.environment import validate_environment, validate_input_directories
@@ -63,8 +62,9 @@ def main() -> int:
         create_success_report(results, output_dir)
         create_cost_report(results, output_dir)
         
-        # Create adjustments report if needed
+        # Create adjustments report if needed (lazy load)
         if results.get('adjustments'):
+            from .reporting.adjustments_reporter import create_adjustments_report
             create_adjustments_report(
                 adjustments=results['adjustments'],
                 output_dir=output_dir,

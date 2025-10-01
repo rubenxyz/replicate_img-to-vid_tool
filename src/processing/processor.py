@@ -9,7 +9,6 @@ from ..api.client import ReplicateClient
 from .input_discovery import discover_input_triplets, load_input_data
 from .profile_loader import load_active_profiles
 from .cost_calculator import calculate_video_cost
-from .video_downloader import download_video
 from .output_generator import save_generation_files
 from .duration_handler import process_duration, get_duration_parameter_name, should_include_fps
 from ..models.generation import GenerationContext
@@ -214,11 +213,16 @@ def _create_video_directory(run_dir: Path, prompt_file: Path, profile: Dict[str,
     return video_dir
 
 
+# Function removed - functionality moved to split functions in _process_single_video
+
+
 def _generate_and_download_video(client: ReplicateClient, profile: Dict[str, Any],
                                 image_url: str, prompt: str, params: Dict[str, Any],
                                 video_dir: Path, prompt_file: Path) -> Tuple[str, Path]:
-    """Generate video via API and download it."""
-    # Generate video
+    """Generate video and download it."""
+    from .video_downloader import download_video
+    
+    # Generate video using Replicate API
     video_url = client.generate_video(
         model_name=profile['model_id'],
         image_url=image_url,
@@ -227,11 +231,10 @@ def _generate_and_download_video(client: ReplicateClient, profile: Dict[str, Any
     )
     
     if not video_url:
-        raise Exception("No video URL returned from API")
+        raise Exception(f"Failed to generate video for {prompt_file.name}")
     
-    # Download and save video with prompt filename
+    # Download video to output directory
     video_path = video_dir / f"{prompt_file.stem}.mp4"
-    logger.info(f"Downloading video from: {video_url[:100]}...")
     download_video(video_url, video_path)
     
     return video_url, video_path

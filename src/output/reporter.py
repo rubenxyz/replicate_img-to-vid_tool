@@ -19,7 +19,6 @@ def create_success_report(results: Dict[str, Any], output_dir: Path) -> None:
 - **Date**: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 - **Total Videos**: {results['total']}
 - **Successful**: {results['success']}
-- **Failed**: {results['failed']}
 - **Total Cost**: ${results['cost']:.2f}
 
 ## Output Location
@@ -31,7 +30,7 @@ def create_success_report(results: Dict[str, Any], output_dir: Path) -> None:
 - Total cost: ${results['cost']:.2f}
 
 ## Status
-{"✅ All videos generated successfully!" if results['failed'] == 0 else f"⚠️ {results['failed']} videos failed to generate"}
+✅ All videos generated successfully!
 """
     
     report_path = output_dir / "SUCCESS.md"

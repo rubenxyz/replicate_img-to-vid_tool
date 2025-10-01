@@ -1,13 +1,14 @@
 """Async Replicate client with polling for verbose output."""
 import os
 import time
-import threading
 from typing import Dict, Any, Optional, Callable
+from ..models.video_processing import VideoRequest
 from loguru import logger
-import replicate
 from replicate.prediction import Prediction
+from replicate.client import Client
 
 from ..utils.verbose_output import log_stage_emoji, show_error_with_retry
+from ..utils.timeouts import create_video_timeout
 
 
 class AsyncReplicateClient:
@@ -40,8 +41,11 @@ class AsyncReplicateClient:
         # Set API token for replicate module
         os.environ['REPLICATE_API_TOKEN'] = api_token
         
-        # Initialize client
-        self.client = replicate.Client(api_token=api_token)
+        # Initialize client with custom timeout for video generation
+        self.client = Client(
+            api_token=api_token,
+            timeout=create_video_timeout()
+        )
         
     def generate_video_with_polling(
         self,
@@ -51,35 +55,45 @@ class AsyncReplicateClient:
         params: Dict[str, Any],
         progress_callback: Optional[Callable[[str, Optional[float]], None]] = None
     ) -> Optional[str]:
+        """Generate video with polling - convenience wrapper."""
+        request = VideoRequest(
+            model_name=model_name,
+            image_url=image_url,
+            prompt=prompt,
+            params=params,
+            progress_callback=progress_callback
+        )
+        return self.generate_video_from_request(request)
+    
+    def generate_video_from_request(
+        self,
+        request: VideoRequest
+    ) -> Optional[str]:
         """
         Generate video with status polling for visibility.
         
         Args:
-            model_name: Replicate model identifier
-            image_url: Direct URL to source image
-            prompt: Motion description
-            params: Generation parameters
-            progress_callback: Optional callback for progress updates
+            request: VideoRequest with all generation parameters
             
         Returns:
             Video URL if successful, None otherwise
         """
         # Build payload
         payload = {
-            "image": image_url,
-            "prompt": prompt,
-            **params
+            "image": request.image_url,
+            "prompt": request.prompt,
+            **request.params
         }
         
-        log_stage_emoji("api_call", f"Sending request to {model_name}")
+        log_stage_emoji("api_call", f"Sending request to {request.model_name}")
         
         # Create prediction with retry logic
-        prediction = self._create_prediction_with_retry(model_name, payload)
+        prediction = self._create_prediction_with_retry(request.model_name, payload)
         if not prediction:
             return None
             
         # Poll for completion
-        return self._poll_prediction(prediction, progress_callback)
+        return self._poll_prediction(prediction, request.progress_callback)
         
     def _create_prediction_with_retry(
         self,
@@ -238,16 +252,4 @@ class AsyncReplicateClient:
         return None
 
 
-class PollingThread(threading.Thread):
-    """Background thread for status polling without blocking main execution."""
-    
-    def __init__(self, client: AsyncReplicateClient, prediction: Prediction, callback: Callable):
-        super().__init__(daemon=True)
-        self.client = client
-        self.prediction = prediction
-        self.callback = callback
-        self.result = None
-        
-    def run(self):
-        """Run polling in background."""
-        self.result = self.client._poll_prediction(self.prediction, self.callback)
+# PollingThread moved to polling_handler.py

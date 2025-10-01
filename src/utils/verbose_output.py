@@ -1,9 +1,9 @@
 """Verbose terminal output configuration for real-time visibility."""
 import sys
-from typing import Optional
+import time
+from typing import Optional, Any
 from loguru import logger
 from rich.console import Console
-from rich.logging import RichHandler
 from rich.progress import (
     Progress, SpinnerColumn, TextColumn, BarColumn, 
     TaskProgressColumn, TimeElapsedColumn, TimeRemainingColumn
@@ -98,7 +98,6 @@ def show_error_with_retry(error: Exception, attempt: int, max_attempts: int, wai
         # Countdown display
         for remaining in range(wait_time, 0, -1):
             console.print(f"  [{remaining}s]", end="\r")
-            import time
             time.sleep(1)
         console.print("         ", end="\r")  # Clear countdown
 
@@ -106,29 +105,29 @@ def show_error_with_retry(error: Exception, attempt: int, max_attempts: int, wai
 class VerboseContext:
     """Context manager for verbose output mode."""
     
-    def __init__(self):
-        self.progress = None
-        self.layout = None
-        self.live = None
+    def __init__(self) -> None:
+        self.progress: Optional[Progress] = None
+        self.layout: Optional[Layout] = None
+        self.live: Optional[Live] = None
         
-    def __enter__(self):
+    def __enter__(self) -> 'VerboseContext':
         setup_verbose_output()
         self.progress = create_progress_display()
         return self
         
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> bool:
         if self.live:
             self.live.stop()
         return False
         
-    def start_live_display(self):
+    def start_live_display(self) -> None:
         """Start live display with layout."""
         if not self.live:
             self.layout = create_layout_display(self.progress)
             self.live = Live(self.layout, console=console, refresh_per_second=2)
             self.live.start()
             
-    def update_logs(self, content: str):
+    def update_logs(self, content: str) -> None:
         """Update the logs panel."""
         if self.layout:
             self.layout["logs"].update(Panel(content, title="Logs", border_style="dim"))

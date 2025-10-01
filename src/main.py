@@ -1,6 +1,5 @@
 """Main entry point for image-to-video generation."""
 import sys
-from pathlib import Path
 from loguru import logger
 from rich.progress import Progress
 
@@ -12,7 +11,7 @@ from .config.settings import (
 from .processing.processor import process_matrix
 from .models.processing import ProcessingContext
 from .output.reporter import create_success_report, create_cost_report
-from .reporting.adjustments_reporter import create_adjustments_report
+# Lazy import for adjustments_reporter - only loaded when needed
 from .utils.logging import setup_logging
 from .validation.environment import validate_environment, validate_input_directories
 from .exceptions import (
@@ -61,8 +60,9 @@ def main() -> int:
         create_success_report(results, output_dir)
         create_cost_report(results, output_dir)
         
-        # Create adjustments report if there were any
+        # Create adjustments report if there were any (lazy load)
         if results.get('adjustments'):
+            from .reporting.adjustments_reporter import create_adjustments_report
             create_adjustments_report(
                 adjustments=results['adjustments'],
                 output_dir=output_dir,

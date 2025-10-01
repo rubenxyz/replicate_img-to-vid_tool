@@ -1,6 +1,5 @@
 """Environment and directory validation utilities."""
 from pathlib import Path
-from typing import Optional
 from loguru import logger
 
 from ..auth import authenticate

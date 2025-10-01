@@ -19,8 +19,8 @@ pricing:
 # Duration configuration
 duration_type: seconds
 fps: 24
-duration_min: 3 # Minimum 5 seconds for this model
-duration_max: 12 # Maximum 10 seconds for this model
+duration_min: 3
+duration_max: 12
 duration_param_name: duration
 
 # Generation parameters for Seedance Lite model

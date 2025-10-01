@@ -9,13 +9,13 @@
 wrapper:
   # Request timeout in seconds (default: 300 for longer video generation)
   #timeout: 300
-  
+
   # Number of retry attempts for failed requests (default: 3)
   max_retries: 3
-  
+
   # Maximum time to wait for queued jobs in seconds (default: 1200 for video)
   max_wait_time: 1200
-  
+
   # Enable verbose logging for debugging (default: true)
   verbose: true
 
@@ -28,18 +28,15 @@ queue:
 video:
   # Download chunk size for video files
   download_chunk_size: 8192
-  
+
   # Video output format
   output_format: "mp4"
-  
-  # Default duration if not specified
-  default_num_frames: 121
 
 # Error notifications
 notifications:
   # Send notification on failure (default: true)
   on_failure: true
-  
+
   # Send notification on success (default: false)
   on_success: false
 

@@ -1,5 +1,6 @@
 # Environment files
 .env
+USER-FILES/01.CONFIG/auth_*.yaml
 
 # User-specific files and directories
 USER-FILES/00.KB/

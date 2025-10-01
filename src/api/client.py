@@ -3,7 +3,8 @@ import os
 import time
 from typing import Dict, Any, Optional
 from loguru import logger
-import replicate
+from replicate.client import Client
+from ..utils.timeouts import create_video_timeout
 
 
 class ReplicateClient:
@@ -35,6 +36,12 @@ class ReplicateClient:
         
         # Set API token in environment for replicate module
         os.environ['REPLICATE_API_TOKEN'] = api_token
+        
+        # Create client with custom timeout for video generation
+        self.client = Client(
+            api_token=api_token,
+            timeout=create_video_timeout()
+        )
         
     def generate_video(
         self,
@@ -70,37 +77,74 @@ class ReplicateClient:
         # Sequential processing
         result = self._call_with_retry(model_name, payload)
         
-        # Extract video URL from result
-        if result:
-            logger.debug(f"Result type: {type(result)}, value: {result}")
-            # Replicate returns the output directly (could be string URL, list, or FileOutput)
-            if isinstance(result, str):
-                logger.info(f"Successfully got video URL: {result}")
-                return result
-            elif hasattr(result, 'url'):
-                # Handle replicate.helpers.FileOutput objects
-                logger.info(f"Successfully got video URL from FileOutput: {result.url}")
-                return result.url
-            elif isinstance(result, list) and len(result) > 0:
-                # Handle lists - check if first item is FileOutput or string
-                first_item = result[0]
-                if hasattr(first_item, 'url'):
-                    logger.info(f"Successfully got video URL from list FileOutput: {first_item.url}")
-                    return first_item.url
-                else:
-                    logger.info(f"Successfully got video URL from list: {first_item}")
-                    return first_item
-            else:
-                # Convert to string as fallback - FileOutput has __str__ method
-                result_str = str(result)
-                if result_str.startswith('http'):
-                    logger.info(f"Successfully converted result to URL: {result_str}")
-                    return result_str
-                else:
-                    logger.error(f"Unexpected response format - type: {type(result)}, value: {result}")
-                    return None
-        else:
+        # Parse response to extract video URL
+        return self._parse_video_response(result)
+    
+    def _parse_video_response(self, result: Any) -> Optional[str]:
+        """
+        Parse API response to extract video URL.
+        
+        Args:
+            result: API response (various types possible)
+            
+        Returns:
+            Video URL if found, None otherwise
+        """
+        if not result:
             logger.error("No result from Replicate API")
+            return None
+        
+        logger.debug(f"Result type: {type(result)}, value: {result}")
+        
+        # Response type handlers
+        handlers = {
+            str: self._handle_string_response,
+            list: self._handle_list_response
+        }
+        
+        # Check for direct type match
+        result_type = type(result)
+        if result_type in handlers:
+            return handlers[result_type](result)
+        
+        # Check for FileOutput object
+        if hasattr(result, 'url'):
+            return self._handle_file_output(result)
+        
+        # Fallback to string conversion
+        return self._handle_fallback(result)
+    
+    def _handle_string_response(self, result: str) -> str:
+        """Handle string response."""
+        logger.info(f"Successfully got video URL: {result}")
+        return result
+    
+    def _handle_file_output(self, result: Any) -> str:
+        """Handle FileOutput response."""
+        logger.info(f"Successfully got video URL from FileOutput: {result.url}")
+        return result.url
+    
+    def _handle_list_response(self, result: list) -> Optional[str]:
+        """Handle list response."""
+        if not result:
+            return None
+        
+        first_item = result[0]
+        if hasattr(first_item, 'url'):
+            logger.info(f"Successfully got video URL from list FileOutput: {first_item.url}")
+            return first_item.url
+        else:
+            logger.info(f"Successfully got video URL from list: {first_item}")
+            return first_item
+    
+    def _handle_fallback(self, result: Any) -> Optional[str]:
+        """Handle unknown response types."""
+        result_str = str(result)
+        if result_str.startswith('http'):
+            logger.info(f"Successfully converted result to URL: {result_str}")
+            return result_str
+        else:
+            logger.error(f"Unexpected response format - type: {type(result)}, value: {result}")
             return None
     
     def _call_with_retry(
@@ -127,8 +171,8 @@ class ReplicateClient:
             try:
                 logger.debug(f"API call attempt {attempt}/{self.max_retries}")
                 
-                # Use replicate.run for synchronous execution
-                result = replicate.run(
+                # Use client.run for synchronous execution with custom timeout
+                result = self.client.run(
                     model,
                     input=payload
                 )

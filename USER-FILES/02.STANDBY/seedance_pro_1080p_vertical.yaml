@@ -24,10 +24,7 @@ duration_param_name: duration
 
 # Generation parameters for Seedance model
 params:
-  # Resolution - 1080p for high quality
-  resolution: "720p"
-
-  # Aspect ratio - vertical format for mobile/social media
+  resolution: "1080p"
   aspect_ratio: "9:16"
 
   # Camera settings

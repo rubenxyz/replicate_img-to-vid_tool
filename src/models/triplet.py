@@ -1,7 +1,7 @@
 """Input triplet model."""
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator, Tuple
+from typing import Iterator
 
 
 @dataclass
