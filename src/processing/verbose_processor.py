@@ -219,7 +219,8 @@ def _process_video_verbose(context: VideoProcessingContext) -> Tuple[float, Dict
         image_url=image_url,
         prompt=prompt,
         params=params,
-        progress_callback=progress_callback
+        progress_callback=progress_callback,
+        image_url_param=context.profile.get('image_url_param', 'image')
     )
     
     if not video_url:

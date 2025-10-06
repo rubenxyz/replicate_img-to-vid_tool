@@ -1,0 +1,30 @@
+# =============================================================================
+# Kling 2.1 Master 1080p Vertical Video Generation Profile
+# =============================================================================
+
+# Model configuration for Replicate
+Model:
+  # ByteDance Seedance 1.0 Pro - Text-to-video and image-to-video model
+  endpoint: kwaivgi/kling-v2.5-turbo-pro
+  code-nickname: kling25turbo_vertical
+
+# Pricing configuration (Replicate charges per second of compute)
+pricing:
+  # Seedance pricing on Replicate (estimated based on compute time)
+  cost_per_second: 0.084 # USD per second of compute time
+  # Alternative: cost per prediction (average for 5-10 second videos)
+
+  #Image URL parameter name mapping
+image_url: image
+
+#Duration handling
+duration_type: seconds
+fps: 24
+duration_min: 5
+duration_max: 10
+duration_param_name: duration
+
+# Generation parameters for Seedance model
+params:
+  aspect_ratio: "9:16"
+  guidance_scale": 0.5

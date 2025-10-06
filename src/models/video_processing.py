@@ -28,3 +28,4 @@ class VideoRequest:
     prompt: str
     params: Dict[str, Any]
     progress_callback: Optional[Any] = None
+    image_url_param: str = "image"

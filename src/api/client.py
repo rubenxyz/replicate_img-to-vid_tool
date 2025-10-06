@@ -48,26 +48,28 @@ class ReplicateClient:
         model_name: str,
         image_url: str,
         prompt: str,
-        params: Dict[str, Any]
+        params: Dict[str, Any],
+        image_url_param: str = "image"
     ) -> Optional[str]:
         """
         Generate video from image URL using Replicate API.
-        
+
         Args:
             model_name: Replicate model name (e.g., 'owner/model:version')
             image_url: Direct URL to source image
             prompt: Motion description text
             params: Video-specific parameters
-            
+            image_url_param: Parameter name for image URL (from profile)
+
         Returns:
             Video URL if successful, None otherwise
-            
+
         Raises:
             Exception: On API failure after retries
         """
         # Build video-specific payload for Replicate
         payload = {
-            "image": image_url,  # Replicate uses 'image' not 'image_url'
+            image_url_param: image_url,  # Use parameter name from profile
             "prompt": prompt,  # Motion description from prompt file
             **params  # Video-specific parameters
         }

@@ -16,6 +16,9 @@ pricing:
   # Alternative: cost per prediction (average for 5-10 second videos)
   cost_per_prediction: 0.15 # USD per video generation
 
+#Image URL parameter name mapping
+image_url: image
+
 # Duration configuration
 duration_type: seconds
 fps: 24

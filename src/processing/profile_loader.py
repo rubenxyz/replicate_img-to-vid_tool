@@ -30,6 +30,9 @@ def load_single_profile(yaml_file: Path) -> Dict[str, Any]:
     duration_config = validator.validate_duration_section(profile_data, yaml_file)
     params = validator.validate_params_section(profile_data, yaml_file)
     
+    # Extract optional image_url parameter name (defaults to "image")
+    image_url_param = profile_data.get('image_url', 'image')
+
     # Build profile dictionary
     profile = {
         "name": profile_name,
@@ -37,7 +40,8 @@ def load_single_profile(yaml_file: Path) -> Dict[str, Any]:
         "nickname": model_section.get('code-nickname', profile_name),
         "pricing": pricing,
         "parameters": params,
-        "duration_config": duration_config
+        "duration_config": duration_config,
+        "image_url_param": image_url_param
     }
     
     logger.info(f"Loaded profile: {profile_name} (endpoint: {model_section['endpoint']})")

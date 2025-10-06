@@ -53,7 +53,8 @@ class AsyncReplicateClient:
         image_url: str,
         prompt: str,
         params: Dict[str, Any],
-        progress_callback: Optional[Callable[[str, Optional[float]], None]] = None
+        progress_callback: Optional[Callable[[str, Optional[float]], None]] = None,
+        image_url_param: str = "image"
     ) -> Optional[str]:
         """Generate video with polling - convenience wrapper."""
         request = VideoRequest(
@@ -61,7 +62,8 @@ class AsyncReplicateClient:
             image_url=image_url,
             prompt=prompt,
             params=params,
-            progress_callback=progress_callback
+            progress_callback=progress_callback,
+            image_url_param=image_url_param
         )
         return self.generate_video_from_request(request)
     
@@ -71,16 +73,16 @@ class AsyncReplicateClient:
     ) -> Optional[str]:
         """
         Generate video with status polling for visibility.
-        
+
         Args:
             request: VideoRequest with all generation parameters
-            
+
         Returns:
             Video URL if successful, None otherwise
         """
-        # Build payload
+        # Build payload with dynamic image parameter name
         payload = {
-            "image": request.image_url,
+            request.image_url_param: request.image_url,  # Use parameter name from profile
             "prompt": request.prompt,
             **request.params
         }

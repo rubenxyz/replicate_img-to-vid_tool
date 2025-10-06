@@ -227,7 +227,8 @@ def _generate_and_download_video(client: ReplicateClient, profile: Dict[str, Any
         model_name=profile['model_id'],
         image_url=image_url,
         prompt=prompt,
-        params=params
+        params=params,
+        image_url_param=profile.get('image_url_param', 'image')
     )
     
     if not video_url:
