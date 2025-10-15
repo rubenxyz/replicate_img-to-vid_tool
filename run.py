@@ -19,6 +19,7 @@ if not venv_python.exists():
     print("Please create a virtual environment first: python3 -m venv venv")
     sys.exit(1)
 
-# Run the verbose main module with the venv Python
+# Always run from the repo root so 'src' is importable
+# and USER-FILES paths resolve correctly.
 cmd = [str(venv_python), "-m", "src.main_verbose"] + sys.argv[1:]
-sys.exit(subprocess.call(cmd))
+sys.exit(subprocess.call(cmd, cwd=str(script_dir)))

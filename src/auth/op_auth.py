@@ -4,7 +4,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Tuple, Iterator
 import yaml
 from loguru import logger
 
@@ -103,66 +103,96 @@ def get_secret(item_name: str, field_name: str) -> str:
         raise
 
 
+# --- Auth config discovery helpers ---
+CONFIG_DIR = Path(__file__).parent.parent.parent / "USER-FILES" / "01.CONFIG"
+
+
+def find_auth_config_paths() -> List[Path]:
+    """Return all USER-FILES/01.CONFIG files named 'auth*.yml' or 'auth*.yaml'."""
+    patterns = ["auth*.yaml", "auth*.yml"]
+    paths: List[Path] = []
+    for pattern in patterns:
+        paths.extend(sorted(CONFIG_DIR.glob(pattern)))
+    return paths
+
+
+def load_auth_config_from_path(path: Path) -> dict:
+    """Load a single auth config YAML file by exact path."""
+    if not path.exists():
+        raise FileNotFoundError(f"Auth config file not found: {path}")
+    with open(path, "r") as f:
+        cfg = yaml.safe_load(f) or {}
+    logger.debug(f"Loaded auth config from {path}")
+    return cfg
+
+
+def iter_auth_configs() -> Iterator[Tuple[dict, Path]]:
+    """Iterate over all discovered auth configs, yielding (config, path)."""
+    for path in find_auth_config_paths():
+        try:
+            yield load_auth_config_from_path(path), path
+        except Exception as e:
+            logger.warning(f"Skipping invalid auth config {path}: {e}")
+            continue
+
+
 def load_auth_config(config_name: str = "auth_ruben.yaml") -> dict:
     """
-    Load authentication configuration from YAML file.
+    Load authentication configuration from YAML file by name (legacy helper).
+    """
+    config_path = CONFIG_DIR / config_name
+    return load_auth_config_from_path(config_path)
+
+
+def get_replicate_api_token_from_op(config_name: Optional[str] = None) -> Optional[str]:
+    """
+    Retrieve Replicate API token from 1Password using configuration file(s).
 
     Args:
-        config_name: Name of the auth config file (default: auth_ruben.yaml)
-
-    Returns:
-        Dictionary containing authentication configuration
-
-    Raises:
-        FileNotFoundError: If config file doesn't exist
-        yaml.YAMLError: If config file is invalid
-    """
-    config_path = Path(__file__).parent.parent.parent / "USER-FILES" / "01.CONFIG" / config_name
-
-    if not config_path.exists():
-        raise FileNotFoundError(f"Auth config file not found: {config_path}")
-
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
-
-    logger.debug(f"Loaded auth config from {config_path}")
-    return config
-
-
-def get_replicate_api_token_from_op(config_name: str = "auth_ruben.yaml") -> Optional[str]:
-    """
-    Retrieve Replicate API token from 1Password using configuration file.
-
-    Args:
-        config_name: Name of the auth config file (default: auth_ruben.yaml)
+        config_name: Optional specific auth config file name. If None, try all auth*.yml/.yaml files.
 
     Returns:
         API token string if successful, None if not found
 
     Raises:
         AuthError: If authentication fails
-        FileNotFoundError: If config file doesn't exist
     """
     try:
-        config = load_auth_config(config_name)
-
-        if "replicate" not in config:
-            logger.error("No 'replicate' section found in auth config")
-            return None
-
-        item_name = config["replicate"]["item_name"]
-        field_name = config["replicate"]["field_name"]
-
-        logger.info(f"Retrieving Replicate API token from 1Password item '{item_name}'")
-        api_token = get_secret(item_name, field_name)
-
-        if api_token:
-            logger.info("✅ Successfully retrieved Replicate API token from 1Password")
-            return api_token
+        # If a specific config is provided, use it first
+        if config_name:
+            config = load_auth_config(config_name)
+            configs: List[Tuple[dict, Path]] = [(config, CONFIG_DIR / config_name)]
         else:
-            logger.warning("Retrieved empty API token from 1Password")
-            return None
+            configs = list(iter_auth_configs())
+            if not configs:
+                logger.warning(f"No auth*.yml/.yaml files found in {CONFIG_DIR}")
+                return None
 
-    except (FileNotFoundError, KeyError, AuthError) as e:
+        for cfg, path in configs:
+            rep = cfg.get("replicate") or {}
+            item_name = rep.get("item_name")
+            field_name = rep.get("field_name")
+            if not item_name or not field_name:
+                logger.warning(f"Missing replicate.item_name/field_name in {path.name}; skipping")
+                continue
+
+            logger.info(f"Retrieving Replicate API token from 1Password (config: {path.name})")
+            try:
+                api_token = get_secret(item_name, field_name)
+            except Exception as e:
+                logger.warning(f"Failed with config {path.name}: {e}; trying next if available")
+                continue
+
+            if api_token:
+                logger.info("✅ Successfully retrieved Replicate API token from 1Password")
+                return api_token
+            else:
+                logger.warning(f"Empty API token returned using {path.name}; trying next if available")
+                continue
+
+        logger.error("No valid Replicate API token found in any auth*.yaml/.yml config")
+        return None
+
+    except AuthError as e:
         logger.error(f"Failed to retrieve API token from 1Password: {e}")
         raise
