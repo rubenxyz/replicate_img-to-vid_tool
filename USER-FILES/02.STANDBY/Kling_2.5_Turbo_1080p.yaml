@@ -6,7 +6,7 @@
 Model:
   # ByteDance Seedance 1.0 Pro - Text-to-video and image-to-video model
   endpoint: kwaivgi/kling-v2.5-turbo-pro
-  code-nickname: kling25turbo_vertical
+  code-nickname: kling25turbo
 
 # Pricing configuration (Replicate charges per second of compute)
 pricing:
@@ -25,5 +25,5 @@ duration_param_name: duration
 
 # Generation parameters for Kling model
 params:
-  aspect_ratio: "9:16"
+  aspect_ratio: "16:9"
   guidance_scale: 0.5

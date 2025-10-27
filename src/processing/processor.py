@@ -16,10 +16,18 @@ from ..models.processing import ProcessingContext
 from .generation_logger import log_generation_start, log_generation_complete
 
 
-def _create_run_directory(output_dir: Path) -> Path:
-    """Create timestamped output directory for this run."""
+def _create_run_directory(output_dir: Path, active_profiles: List[Dict[str, Any]]) -> Path:
+    """Create timestamped output directory for this run.
+    If exactly one profile is active, use its name as the suffix.
+    """
     timestamp = datetime.now().strftime("%y%m%d_%H%M%S")
-    run_dir = output_dir / timestamp
+    if len(active_profiles) == 1:
+        # Sanitize profile name for filesystem
+        profile_suffix = str(active_profiles[0]['name']).strip().replace('/', '-').replace(' ', '_')
+        dir_name = f"{timestamp}_{profile_suffix}"
+    else:
+        dir_name = f"{timestamp}_VIDEO"
+    run_dir = output_dir / dir_name
     run_dir.mkdir(parents=True, exist_ok=True)
     logger.info(f"Output directory: {run_dir}")
     return run_dir
@@ -88,7 +96,7 @@ def process_matrix(context: ProcessingContext) -> Dict[str, Any]:
     logger.info(f"Loaded {len(active_profiles)} video profiles")
     
     # 3. Create timestamped output directory
-    run_dir = _create_run_directory(context.output_dir)
+    run_dir = _create_run_directory(context.output_dir, active_profiles)
     
     # 4. Process matrix sequentially
     total = len(triplets) * len(active_profiles)
@@ -149,8 +157,19 @@ def _process_single_video(client: ReplicateClient, prompt_file: Path, image_url_
             client, profile, image_url, prompt, params, video_dir, prompt_file
         )
         
-        # Calculate cost
-        video_cost = calculate_video_cost(profile, num_frames)
+        # Calculate cost based on actual video duration
+        # Extract duration from params (could be 'duration', 'num_frames', or 'seconds')
+        param_name = profile['duration_config']['duration_param_name']
+        video_duration = params.get(param_name, num_frames)
+        
+        # Convert to seconds if needed
+        if profile['duration_config']['duration_type'] == 'frames':
+            fps = profile['duration_config']['fps']
+            video_duration_seconds = int(video_duration / fps)
+        else:  # already in seconds
+            video_duration_seconds = video_duration
+        
+        video_cost = calculate_video_cost(profile, video_duration_seconds)
         
         # Create generation context with all data
         context = GenerationContext(

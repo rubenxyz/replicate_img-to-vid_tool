@@ -1,9 +1,6 @@
 """Video generation cost calculation - supports multiple pricing models."""
 from typing import Dict, Any, Union
 
-# Constants
-ESTIMATED_SECONDS_PER_FRAME = 3  # Rough estimate for time-based pricing
-
 
 def _validate_numeric_field(value: Union[int, float], field_name: str, profile_name: str) -> None:
     """
@@ -23,21 +20,19 @@ def _validate_numeric_field(value: Union[int, float], field_name: str, profile_n
         )
 
 
-def calculate_video_cost(profile: Dict[str, Any], num_frames: int) -> float:
+def calculate_video_cost(profile: Dict[str, Any], video_duration_seconds: int) -> float:
     """
-    Calculate cost for video generation based on pricing model.
+    Calculate cost for video generation based on Replicate compute-time pricing.
     
-    Supports:
-    - Frame-based: cost_per_frame × number_of_frames
-    - Prediction-based: fixed cost_per_prediction
-    - Time-based: cost_per_second × estimated_seconds
+    For video generation, cost = cost_per_second × video_duration_seconds
+    (The duration is the length of the output video, not compute time)
     
     Args:
         profile: Profile dictionary containing pricing configuration
-        num_frames: Number of frames for the video
+        video_duration_seconds: Duration of the generated video in seconds
         
     Returns:
-        Cost in USD based on pricing model
+        Cost in USD based on video duration
         
     Raises:
         ValueError: If pricing configuration is missing or invalid
@@ -47,35 +42,16 @@ def calculate_video_cost(profile: Dict[str, Any], num_frames: int) -> float:
     
     pricing = profile['pricing']
     
-    # Frame-based pricing model
-    if 'cost_per_frame' in pricing:
-        cost_per_frame = pricing['cost_per_frame']
-        _validate_numeric_field(cost_per_frame, 'cost_per_frame', profile.get('name', 'unknown'))
-        
-        # Calculate total cost: frames × cost_per_frame
-        total_cost = cost_per_frame * num_frames
-        return round(total_cost, 4)
-    
-    # Prediction-based pricing (Replicate model)
-    elif 'cost_per_prediction' in pricing:
-        cost_per_prediction = pricing['cost_per_prediction']
-        _validate_numeric_field(cost_per_prediction, 'cost_per_prediction', profile.get('name', 'unknown'))
-        
-        # Fixed cost per generation
-        return round(cost_per_prediction, 4)
-    
-    # Time-based pricing (Replicate compute time)
-    elif 'cost_per_second' in pricing:
+    # Video generation pricing (cost per second of video output)
+    if 'cost_per_second' in pricing:
         cost_per_second = pricing['cost_per_second']
         _validate_numeric_field(cost_per_second, 'cost_per_second', profile.get('name', 'unknown'))
         
-        # Estimate compute time based on frames
-        estimated_seconds = num_frames * ESTIMATED_SECONDS_PER_FRAME
-        total_cost = cost_per_second * estimated_seconds
+        # Calculate cost: video_duration × cost_per_second
+        total_cost = cost_per_second * video_duration_seconds
         return round(total_cost, 4)
     
     else:
         raise ValueError(
-            f"Profile '{profile.get('name', 'unknown')}' must have one of: "
-            f"'cost_per_frame', 'cost_per_prediction', or 'cost_per_second' in pricing section"
+            f"Profile '{profile.get('name', 'unknown')}' must have 'cost_per_second' in pricing section"
         )

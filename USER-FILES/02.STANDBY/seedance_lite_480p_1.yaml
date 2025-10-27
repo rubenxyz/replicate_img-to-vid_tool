@@ -7,12 +7,12 @@ Model:
   # ByteDance Seedance 1.0 Lite - Fast text-to-video and image-to-video model
   # Supports 5s or 10s videos at 480p and 720p resolution
   endpoint: bytedance/seedance-1-lite
-  code-nickname: seedance-lite-720p
+  code-nickname: seedance-lite-480p
 
 # Pricing configuration (Replicate charges per second of compute)
 pricing:
   # Seedance Lite pricing on Replicate
-  cost_per_second: 0.036 # USD per second of compute time
+  cost_per_second: 0.018 # USD per second of compute time
 
 #Image URL parameter name mapping
 image_url: image
@@ -20,17 +20,17 @@ image_url: image
 # Duration configuration
 duration_type: seconds
 fps: 24
-duration_min: 3 # Minimum 5 seconds for this model
-duration_max: 12 # Maximum 10 seconds for this model
+duration_min: 3
+duration_max: 12
 duration_param_name: duration
 
 # Generation parameters for Seedance Lite model
 params:
   # Resolution - 720p (also supports 480p)
-  resolution: "720p"
+  resolution: "480p"
 
   # Aspect ratio - standard widescreen
-  aspect_ratio: "9:16"
+  aspect_ratio: "16:9"
 
   # Frame rate (24 fps is standard)
   fps: 24

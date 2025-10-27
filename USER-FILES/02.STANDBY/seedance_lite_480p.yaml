@@ -1,19 +1,18 @@
 # =============================================================================
-# Seedance 1080p Vertical Video Generation Profile
+# Seedance Lite 720p Video Generation Profile
 # =============================================================================
 
 # Model configuration for Replicate
 Model:
-  # ByteDance Seedance 1.0 Pro - Text-to-video and image-to-video model
-  endpoint: bytedance/seedance-1-pro
-  code-nickname: seedance-vertical
+  # ByteDance Seedance 1.0 Lite - Fast text-to-video and image-to-video model
+  # Supports 5s or 10s videos at 480p and 720p resolution
+  endpoint: bytedance/seedance-1-lite
+  code-nickname: seedance-lite-480p
 
 # Pricing configuration (Replicate charges per second of compute)
 pricing:
-  # Seedance pricing on Replicate (estimated based on compute time)
-  cost_per_second: 0.00325 # USD per second of compute time
-  # Alternative: cost per prediction (average for 5-10 second videos)
-  cost_per_prediction: 0.25 # USD per video generation
+  # Seedance Lite pricing on Replicate
+  cost_per_second: 0.018 # USD per second of compute time
 
 #Image URL parameter name mapping
 image_url: image
@@ -22,16 +21,19 @@ image_url: image
 duration_type: seconds
 fps: 24
 duration_min: 3
-duration_max: 10
+duration_max: 12
 duration_param_name: duration
 
-# Generation parameters for Seedance model
+# Generation parameters for Seedance Lite model
 params:
-  # Resolution - 1080p for high quality
-  resolution: "1080p"
+  # Resolution - 720p (also supports 480p)
+  resolution: "480p"
 
-  # Aspect ratio - vertical format for mobile/social media
-  aspect_ratio: "9:16"
+  # Aspect ratio - standard widescreen
+  aspect_ratio: "16:9"
+
+  # Frame rate (24 fps is standard)
+  fps: 24
 
   # Camera settings
   camera_fixed: false # Allow dynamic camera movements
@@ -40,3 +42,4 @@ params:
   seed: -1
   # Note: The 'prompt' field will be populated from input files
   # Note: The 'image' field will be populated from input files for I2V mode
+  # Note: This model also supports 'last_frame_image' and 'reference_images' parameters

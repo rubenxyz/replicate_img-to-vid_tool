@@ -11,10 +11,8 @@ Model:
 
 # Pricing configuration (Replicate charges per second of compute)
 pricing:
-  # Seedance Lite pricing on Replicate (estimated - typically cheaper than Pro)
-  cost_per_second: 0.00225 # USD per second of compute time
-  # Alternative: cost per prediction (average for 5-10 second videos)
-  cost_per_prediction: 0.15 # USD per video generation
+  # Seedance Lite pricing on Replicate
+  cost_per_second: 0.036 # USD per second of compute time
 
 #Image URL parameter name mapping
 image_url: image

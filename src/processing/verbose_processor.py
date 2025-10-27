@@ -8,10 +8,11 @@ from typing import Dict, Any, Optional, Tuple, List
 from loguru import logger
 
 # Local imports - API
-from ..api.async_client import AsyncReplicateClient
+from ..api.async_client_enhanced import AsyncReplicateClientEnhanced
 
 # Local imports - Utils
-from ..utils.verbose_output import VerboseContext, log_stage_emoji, create_progress_display
+from ..utils.verbose_output import VerboseContext, log_stage_emoji
+from ..utils.epic_progress import VideoGenerationProgress, create_api_callback
 
 # Local imports - Models
 from ..models.generation import GenerationContext
@@ -49,10 +50,10 @@ def process_matrix_verbose(context: ProcessingContext) -> Dict[str, Any]:
         return _generate_summary(results, run_dir)
 
 
-def _setup_processing(context: ProcessingContext) -> Tuple[AsyncReplicateClient, List, List, Path]:
+def _setup_processing(context: ProcessingContext) -> Tuple[AsyncReplicateClientEnhanced, List, List, Path]:
     """Setup processing environment and discover inputs."""
-    # Create async client for polling
-    async_client = AsyncReplicateClient(
+    # Create enhanced async client with alive-progress animation
+    async_client = AsyncReplicateClientEnhanced(
         api_token=context.client.api_token,
         poll_interval=3
     )
@@ -71,7 +72,13 @@ def _setup_processing(context: ProcessingContext) -> Tuple[AsyncReplicateClient,
     
     # Create output directory
     timestamp = datetime.now().strftime("%y%m%d_%H%M%S")
-    run_dir = context.output_dir / timestamp
+    if len(active_profiles) == 1:
+        # Sanitize profile name for filesystem
+        profile_suffix = str(active_profiles[0]['name']).strip().replace('/', '-').replace(' ', '_')
+        dir_name = f"{timestamp}_{profile_suffix}"
+    else:
+        dir_name = f"{timestamp}_VIDEO"
+    run_dir = context.output_dir / dir_name
     run_dir.mkdir(parents=True, exist_ok=True)
     logger.info(f"📁 Output: {run_dir}")
     
@@ -79,38 +86,37 @@ def _setup_processing(context: ProcessingContext) -> Tuple[AsyncReplicateClient,
 
 
 def _execute_video_batch(
-    async_client: AsyncReplicateClient,
+    async_client: AsyncReplicateClientEnhanced,
     triplets: List,
     active_profiles: List,
     run_dir: Path
 ) -> Dict[str, Any]:
-    """Execute batch video processing with progress tracking."""
+    """Execute batch video processing with epic progress tracking."""
     total = len(triplets) * len(active_profiles)
-    progress = create_progress_display()
     
-    # Start progress tracking
-    main_task = progress.add_task(
-        f"Processing {total} videos",
-        total=total,
-        status="Starting..."
-    )
+    # Create epic progress bar
+    epic_progress = VideoGenerationProgress()
     
     success_count = 0
     total_cost = 0.0
     all_adjustments = []
     
-    with progress:
+    # Use epic progress with panel wrapper
+    with epic_progress.track_generation(total, title="Video Generation Matrix") as (progress, main_task):
         for idx, (prompt_file, image_url_file, num_frames_file) in enumerate(triplets):
             for profile in active_profiles:
-                # Update progress
                 video_name = f"{prompt_file.stem}_X_{profile['name']}"
-                progress.update(
-                    main_task,
-                    description=f"[cyan]{video_name}",
-                    status="Processing..."
-                )
                 
                 try:
+                    # Update progress with video name and phase
+                    epic_progress.update_status(
+                        progress,
+                        main_task,
+                        status="Starting...",
+                        video_name=video_name,
+                        phase="Initializing"
+                    )
+                    
                     # Create processing context
                     video_context = VideoProcessingContext(
                         client=async_client,
@@ -123,8 +129,10 @@ def _execute_video_batch(
                         task_id=main_task
                     )
                     
-                    # Process single video
-                    video_cost, adjustment_info = _process_video_verbose(video_context)
+                    # Process single video with epic progress
+                    video_cost, adjustment_info = _process_video_verbose(
+                        video_context, epic_progress
+                    )
                     
                     success_count += 1
                     total_cost += video_cost
@@ -136,18 +144,26 @@ def _execute_video_batch(
                             'profile': profile['name'],
                             **adjustment_info
                         })
-                        
-                    # Update progress
+                    
+                    # Mark as successful with cost
+                    epic_progress.mark_success(progress, main_task, video_name, video_cost)
+                    
+                    # Advance progress
                     progress.advance(main_task)
-                    progress.update(
+                    
+                    # Update total cost in status
+                    epic_progress.update_with_cost(
+                        progress,
                         main_task,
-                        status=f"✅ Complete (${video_cost:.2f})"
+                        status="Complete",
+                        total_cost=total_cost,
+                        video_name=video_name
                     )
                     
                 except Exception as e:
-                    log_stage_emoji("failed", f"Failed: {video_name}")
+                    # Mark error with epic progress
+                    epic_progress.mark_error(progress, main_task, video_name, str(e))
                     logger.exception(e)
-                    progress.update(main_task, status="❌ Failed")
                     raise  # Fail fast
     
     return {
@@ -177,7 +193,10 @@ def _generate_summary(results: Dict[str, Any], run_dir: Path) -> Dict[str, Any]:
     }
 
 
-def _process_video_verbose(context: VideoProcessingContext) -> Tuple[float, Dict[str, Any]]:
+def _process_video_verbose(
+    context: VideoProcessingContext,
+    epic_progress: VideoGenerationProgress
+) -> Tuple[float, Dict[str, Any]]:
     """Process single video with verbose output and polling."""
     
     # Load inputs
@@ -194,6 +213,15 @@ def _process_video_verbose(context: VideoProcessingContext) -> Tuple[float, Dict
     # Prepare parameters
     params, adjustment_info = _prepare_params_verbose(context.profile, num_frames)
     
+    # Update progress: preparing phase
+    epic_progress.update_status(
+        context.progress,
+        context.task_id,
+        status="Preparing API call",
+        video_name=video_name,
+        phase="Preparing"
+    )
+    
     # Log generation details
     logger.info("═" * 60)
     log_stage_emoji("starting", f"Generating: {video_name}")
@@ -203,16 +231,12 @@ def _process_video_verbose(context: VideoProcessingContext) -> Tuple[float, Dict
     logger.info(f"⏱️  Duration: {params.get('duration', params.get('num_frames', 'N/A'))}")
     logger.info("═" * 60)
     
-    # Generate with polling
-    def progress_callback(status: str, percentage: Optional[float]):
-        """Update progress bar with status."""
-        if percentage is not None:
-            context.progress.update(
-                context.task_id,
-                status=f"⚙️ {status.title()} ({percentage:.0f}%)"
-            )
-        else:
-            context.progress.update(context.task_id, status=f"⏳ {status.title()}")
+    # Create API callback using epic progress helper
+    progress_callback = create_api_callback(
+        context.progress,
+        context.task_id,
+        epic_progress.console
+    )
     
     video_url = context.client.generate_video_with_polling(
         model_name=context.profile['model_id'],
@@ -224,18 +248,45 @@ def _process_video_verbose(context: VideoProcessingContext) -> Tuple[float, Dict
     )
     
     if not video_url:
-        raise Exception("No video URL returned from API")
+        error_msg = f"No video URL returned from API for {video_name}"
+        logger.error(error_msg)
+        raise Exception(error_msg)
     
-    # Download video
-    log_stage_emoji("downloading", f"Downloading video...")
+    # Update progress: downloading phase
+    epic_progress.update_status(
+        context.progress,
+        context.task_id,
+        status="Downloading video",
+        video_name=video_name,
+        phase="Downloading"
+    )
+    
     video_path = video_dir / f"{context.prompt_file.stem}.mp4"
     download_video(video_url, video_path)
     
-    # Calculate cost
-    video_cost = calculate_video_cost(context.profile, num_frames)
+    # Calculate cost based on actual video duration
+    # Extract duration from params (could be 'duration', 'num_frames', or 'seconds')
+    param_name = context.profile['duration_config']['duration_param_name']
+    video_duration = params.get(param_name, num_frames)
     
-    # Save documentation
-    log_stage_emoji("saving", "Saving generation files...")
+    # Convert to seconds if needed
+    if context.profile['duration_config']['duration_type'] == 'frames':
+        fps = context.profile['duration_config']['fps']
+        video_duration_seconds = int(video_duration / fps)
+    else:  # already in seconds
+        video_duration_seconds = video_duration
+    
+    video_cost = calculate_video_cost(context.profile, video_duration_seconds)
+    
+    # Update progress: saving phase
+    epic_progress.update_status(
+        context.progress,
+        context.task_id,
+        status="Saving documentation",
+        video_name=video_name,
+        phase="Finalizing"
+    )
+    
     gen_context = GenerationContext(
         prompt_file=context.prompt_file,
         image_url_file=context.image_url_file,
