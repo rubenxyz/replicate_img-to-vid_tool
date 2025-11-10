@@ -139,6 +139,12 @@ def _process_single_video(client: ReplicateClient, prompt_file: Path, image_url_
         prompt_file, image_url_file, num_frames_file
     )
     
+    # Apply prompt suffix if configured in profile
+    original_prompt = prompt
+    if profile.get('prompt_suffix'):
+        prompt = f"{prompt} {profile['prompt_suffix']}"
+        logger.debug(f"Applied prompt suffix: '{profile['prompt_suffix']}'")
+    
     # Create output directory
     video_dir = _create_video_directory(run_dir, prompt_file, profile)
     subfolder_name = video_dir.name
@@ -172,12 +178,14 @@ def _process_single_video(client: ReplicateClient, prompt_file: Path, image_url_
         video_cost = calculate_video_cost(profile, video_duration_seconds)
         
         # Create generation context with all data
+        # Note: We save the original prompt (without suffix) in context for documentation
+        # The suffix was already applied and used in the API call above
         context = GenerationContext(
             prompt_file=prompt_file,
             image_url_file=image_url_file,
             num_frames_file=num_frames_file,
             output_dir=video_dir,
-            prompt=prompt,
+            prompt=original_prompt,
             image_url=image_url,
             num_frames=num_frames,
             profile=profile,

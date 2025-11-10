@@ -1,6 +1,6 @@
 """Video profile model."""
 from dataclasses import dataclass
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 
 @dataclass
@@ -11,4 +11,5 @@ class VideoProfile:
     nickname: str
     pricing: Dict[str, float]
     parameters: Dict[str, Any]
+    prompt_suffix: Optional[str] = None
     

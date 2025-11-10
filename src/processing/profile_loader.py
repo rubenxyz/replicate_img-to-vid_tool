@@ -32,6 +32,9 @@ def load_single_profile(yaml_file: Path) -> Dict[str, Any]:
     
     # Extract optional image_url parameter name (defaults to "image")
     image_url_param = profile_data.get('image_url', 'image')
+    
+    # Extract optional prompt_suffix (defaults to None)
+    prompt_suffix = profile_data.get('prompt_suffix', None)
 
     # Build profile dictionary
     profile = {
@@ -41,7 +44,8 @@ def load_single_profile(yaml_file: Path) -> Dict[str, Any]:
         "pricing": pricing,
         "parameters": params,
         "duration_config": duration_config,
-        "image_url_param": image_url_param
+        "image_url_param": image_url_param,
+        "prompt_suffix": prompt_suffix
     }
     
     logger.info(f"Loaded profile: {profile_name} (endpoint: {model_section['endpoint']})")

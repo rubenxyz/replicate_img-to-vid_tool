@@ -1,10 +1,9 @@
 # =============================================================================
-# Kling 2.1 Master 1080p Vertical Video Generation Profile
+# Kling 2.5 Turbo 1080p Video Generation Profile
 # =============================================================================
 
 # Model configuration for Replicate
 Model:
-  # ByteDance Seedance 1.0 Pro - Text-to-video and image-to-video model
   endpoint: kwaivgi/kling-v2.5-turbo-pro
   code-nickname: kling25turbo
 
@@ -13,10 +12,15 @@ pricing:
   # Kling 2.5 Turbo pricing on Replicate
   cost_per_second: 0.07 # USD per second of compute time
 
-  #Image URL parameter name mapping
+# Image URL parameter name mapping
 image_url: image
 
-#Duration handling
+# Optional prompt suffix - will be appended to all prompts for this profile
+# Use this to add consistent phrases/style directions to every video generation
+# Example: "cinematic lighting, high quality"
+prompt_suffix: "smooth camera movement, professional cinematography"
+
+# Duration handling
 duration_type: seconds
 fps: 24
 duration_min: 5
@@ -27,3 +31,4 @@ duration_param_name: duration
 params:
   aspect_ratio: "16:9"
   guidance_scale: 0.5
+  negative_prompt: "motion blur, lens breathing, shake, distortion, grain, artifacts, deformation, zoom"
