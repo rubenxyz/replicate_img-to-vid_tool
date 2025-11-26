@@ -33,8 +33,8 @@ def load_single_profile(yaml_file: Path) -> Dict[str, Any]:
     # Extract optional image_url parameter name (defaults to "image")
     image_url_param = profile_data.get('image_url', 'image')
     
-    # Extract optional prompt_suffix (defaults to None)
-    prompt_suffix = profile_data.get('prompt_suffix', None)
+    # Validate and extract optional prompt modifications
+    prompt_prefix, prompt_suffix = validator.validate_prompt_modifications(profile_data, yaml_file)
 
     # Build profile dictionary
     profile = {
@@ -45,10 +45,23 @@ def load_single_profile(yaml_file: Path) -> Dict[str, Any]:
         "parameters": params,
         "duration_config": duration_config,
         "image_url_param": image_url_param,
+        "prompt_prefix": prompt_prefix,
         "prompt_suffix": prompt_suffix
     }
     
+    # Log profile loading with prompt modifications if configured
     logger.info(f"Loaded profile: {profile_name} (endpoint: {model_section['endpoint']})")
+    
+    # Log prompt modifications if any are configured
+    modifications = []
+    if prompt_prefix and prompt_prefix.strip():
+        modifications.append(f"prefix='{prompt_prefix.strip()}'")
+    if prompt_suffix and prompt_suffix.strip():
+        modifications.append(f"suffix='{prompt_suffix.strip()}'")
+    
+    if modifications:
+        logger.info(f"  → Prompt modifications: {', '.join(modifications)}")
+    
     return profile
 
 

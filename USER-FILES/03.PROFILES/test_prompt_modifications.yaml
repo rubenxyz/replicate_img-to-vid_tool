@@ -1,0 +1,36 @@
+# =============================================================================
+# TEST PROFILE: Prompt Prefix/Suffix Modification Feature
+# =============================================================================
+# This profile tests the prompt modification feature with both prefix and suffix
+
+# Model configuration for Replicate
+Model:
+  # ByteDance Seedance 1.0 Lite - Fast text-to-video and image-to-video model
+  endpoint: bytedance/seedance-1-lite
+  code-nickname: test-prompt-mods
+
+# Pricing configuration
+pricing:
+  cost_per_second: 0.036 # USD per second of compute time
+
+# Image URL parameter name mapping
+image_url: image
+
+# PROMPT MODIFICATIONS - Testing both prefix and suffix
+prompt_prefix: ""
+prompt_suffix: " Camera dollies in slowly."
+
+# Duration configuration
+duration_type: seconds
+fps: 24
+duration_min: 3
+duration_max: 12
+duration_param_name: duration
+
+# Generation parameters for Seedance Lite model
+params:
+  resolution: "720p"
+  aspect_ratio: "9:16"
+  fps: 24
+  camera_fixed: false
+  seed: -1

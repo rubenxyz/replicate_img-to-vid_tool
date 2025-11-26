@@ -17,10 +17,10 @@ pricing:
 #Image URL parameter name mapping
 image_url: image
 
-# Optional prompt suffix - will be appended to all prompts for this profile
-# Use this to add consistent phrases/style directions to every video generation
-# Example: "cinematic lighting, high quality"
-# prompt_suffix: "smooth motion, cinematic quality"
+# Optional prompt modifications - will be applied to all prompts for this profile
+# Use these to add consistent phrases/style directions to every video generation
+# prompt_prefix: "Cinematic style:" # Added BEFORE the prompt
+# prompt_suffix: "smooth motion, cinematic quality" # Added AFTER the prompt
 
 # Duration configuration
 duration_type: seconds

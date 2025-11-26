@@ -66,7 +66,7 @@ def _process_all_videos(client: ReplicateClient, triplets: List[Tuple[Path, Path
             success_count += 1
             total_cost += video_cost
             
-            if progress:
+            if progress and task_id is not None:
                 progress.advance(task_id)
     
     return success_count, total_cost, all_adjustments
@@ -114,6 +114,41 @@ def process_matrix(context: ProcessingContext) -> Dict[str, Any]:
     }
 
 
+def _apply_prompt_modifications(prompt: str, profile: Dict[str, Any]) -> str:
+    """
+    Apply prefix and suffix modifications to prompt based on profile configuration.
+    
+    Args:
+        prompt: Original prompt text
+        profile: Profile configuration dictionary
+        
+    Returns:
+        Modified prompt with prefix/suffix applied
+        
+    Raises:
+        ValueError: If final prompt is empty after modifications
+    """
+    # Strip whitespace from original prompt
+    prompt = prompt.strip()
+    
+    # Apply prefix if configured
+    prefix = profile.get('prompt_prefix')
+    if prefix and prefix.strip():
+        prompt = f"{prefix.strip()} {prompt}" if prompt else prefix.strip()
+    
+    # Apply suffix if configured
+    suffix = profile.get('prompt_suffix')
+    if suffix and suffix.strip():
+        prompt = f"{prompt} {suffix.strip()}" if prompt else suffix.strip()
+    
+    # Final validation and normalize whitespace
+    prompt = ' '.join(prompt.split())
+    if not prompt:
+        raise ValueError("Final prompt is empty after applying modifications")
+    
+    return prompt
+
+
 def _process_single_video(client: ReplicateClient, prompt_file: Path, image_url_file: Path,
                          num_frames_file: Path, profile: Dict[str, Any],
                          run_dir: Path) -> Tuple[float, Dict[str, Any]]:
@@ -139,11 +174,9 @@ def _process_single_video(client: ReplicateClient, prompt_file: Path, image_url_
         prompt_file, image_url_file, num_frames_file
     )
     
-    # Apply prompt suffix if configured in profile
+    # Apply prompt modifications (prefix/suffix) if configured in profile
     original_prompt = prompt
-    if profile.get('prompt_suffix'):
-        prompt = f"{prompt} {profile['prompt_suffix']}"
-        logger.debug(f"Applied prompt suffix: '{profile['prompt_suffix']}'")
+    prompt = _apply_prompt_modifications(prompt, profile)
     
     # Create output directory
     video_dir = _create_video_directory(run_dir, prompt_file, profile)

@@ -25,6 +25,7 @@ from .input_discovery import discover_input_triplets, load_input_data
 from .output_generator import save_generation_files
 from .profile_loader import load_active_profiles
 from .video_downloader import download_video
+from .processor import _apply_prompt_modifications
 
 
 def process_matrix_verbose(context: ProcessingContext) -> Dict[str, Any]:
@@ -204,6 +205,9 @@ def _process_video_verbose(
     prompt, image_url, num_frames = load_input_data(
         context.prompt_file, context.image_url_file, context.num_frames_file
     )
+    
+    # Apply prompt modifications (prefix/suffix) if configured
+    prompt = _apply_prompt_modifications(prompt, context.profile)
     
     # Create output directory
     video_name = f"{context.prompt_file.stem}_X_{context.profile['name']}"

@@ -132,3 +132,36 @@ class ProfileValidator:
                 f"Must specify generation parameters."
             )
         return profile_data['params']
+    
+    @staticmethod
+    def validate_prompt_modifications(profile_data: Dict[str, Any], yaml_file: Path) -> tuple:
+        """
+        Validate optional prompt_prefix and prompt_suffix fields.
+        
+        Args:
+            profile_data: Profile data dictionary
+            yaml_file: Path to YAML file for error messages
+            
+        Returns:
+            Tuple of (prompt_prefix, prompt_suffix) - both can be None or str
+            
+        Raises:
+            ProfileValidationError: If prefix/suffix is not str or None
+        """
+        prompt_prefix = profile_data.get('prompt_prefix', None)
+        prompt_suffix = profile_data.get('prompt_suffix', None)
+        
+        # Type validation - must be string or None
+        if prompt_prefix is not None and not isinstance(prompt_prefix, str):
+            raise ProfileValidationError(
+                f"Profile {yaml_file} has invalid prompt_prefix. "
+                f"Must be a string or omitted, got {type(prompt_prefix).__name__}"
+            )
+        
+        if prompt_suffix is not None and not isinstance(prompt_suffix, str):
+            raise ProfileValidationError(
+                f"Profile {yaml_file} has invalid prompt_suffix. "
+                f"Must be a string or omitted, got {type(prompt_suffix).__name__}"
+            )
+        
+        return prompt_prefix, prompt_suffix

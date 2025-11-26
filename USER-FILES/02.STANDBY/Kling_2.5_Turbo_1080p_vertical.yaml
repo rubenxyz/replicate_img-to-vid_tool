@@ -16,6 +16,10 @@ pricing:
   #Image URL parameter name mapping
 image_url: image
 
+# Optional prompt modifications - will be applied to all prompts for this profile
+# prompt_prefix: "Cinematic style:" # Added BEFORE the prompt
+# prompt_suffix: "smooth motion, cinematic quality" # Added AFTER the prompt
+
 #Duration handling
 duration_type: seconds
 fps: 24
