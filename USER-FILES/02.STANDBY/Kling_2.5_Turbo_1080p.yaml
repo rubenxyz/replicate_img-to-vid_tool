@@ -18,7 +18,7 @@ image_url: image
 # Optional prompt suffix - will be appended to all prompts for this profile
 # Use this to add consistent phrases/style directions to every video generation
 # Example: "cinematic lighting, high quality"
-prompt_suffix: "smooth camera movement, professional cinematography"
+prompt_suffix: " No digital zoom, pure physical camera movement, ultra-sharp focus, 4K, 60 fps."
 
 # Duration handling
 duration_type: seconds
@@ -31,4 +31,4 @@ duration_param_name: duration
 params:
   aspect_ratio: "16:9"
   guidance_scale: 0.5
-  negative_prompt: "motion blur, lens breathing, shake, distortion, grain, artifacts, deformation, zoom"
+  negative_prompt: "motion blur, lens breathing, distortion, grain, artifacts, noise, deformation"

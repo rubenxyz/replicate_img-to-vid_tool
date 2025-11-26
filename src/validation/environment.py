@@ -20,8 +20,11 @@ def validate_environment() -> str:
     
     api_key = authenticate()
     if not api_key:
-        logger.error("No API key found")
-        raise AuthenticationError("No API key found. Please set REPLICATE_API_TOKEN environment variable.")
+        logger.error("No API key found via 1Password")
+        raise AuthenticationError(
+            "No API key found. Please ensure USER-FILES/01.CONFIG/auth*.yaml exists "
+            "with valid 1Password credentials."
+        )
     
     return api_key
 

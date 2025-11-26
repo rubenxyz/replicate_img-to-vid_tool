@@ -1,0 +1,5 @@
+# 1Password CLI Authentication Configuration
+
+replicate:
+  item_name: "API Replicate Turkdisco"
+  field_name: "Api Key"

@@ -1,23 +1,21 @@
-"""Authentication module for Replicate API."""
+"""Authentication module for Replicate API using 1Password only."""
 from typing import Optional
-from .env import get_replicate_api_token_from_env
 from .op_auth import get_replicate_api_token_from_op, AuthError
 
+__all__ = ['authenticate', 'AuthError']
 
-def authenticate(use_1password: bool = True, config_name: Optional[str] = None) -> str:
+
+def authenticate(config_name: Optional[str] = None) -> str:
     """
-    Authenticate with Replicate API.
+    Authenticate with Replicate API using 1Password.
 
-    Default behavior (use_1password=True):
-    - Discover USER-FILES/01.CONFIG/auth*.yml/.yaml and read Replicate OP item/field from them.
-    - Use 1Password CLI to fetch the token based on those fields.
-    - If no valid auth YAML is found or OP lookup fails, raise a clear error (no implicit env fallback).
-
-    If use_1password=False, fall back to REPLICATE_API_TOKEN from environment/.env.
+    Discovers USER-FILES/01.CONFIG/auth*.yml/.yaml files and retrieves the
+    Replicate API token from 1Password based on the item_name and field_name
+    specified in the auth config.
 
     Args:
-        use_1password: Prefer 1Password via auth*.yml/.yaml (default True)
         config_name: Optional specific auth config filename (e.g., 'auth_bites.yaml')
+                    If None, tries all auth*.yml/.yaml files in order
 
     Returns:
         API token string
@@ -26,26 +24,17 @@ def authenticate(use_1password: bool = True, config_name: Optional[str] = None) 
         ValueError: If no API token can be found
         AuthError: If 1Password authentication fails
     """
-    if use_1password:
-        try:
-            api_token = get_replicate_api_token_from_op(config_name)
-            if api_token:
-                return api_token
-        except (AuthError, FileNotFoundError) as e:
-            from loguru import logger
-            logger.error(f"1Password authentication error: {e}")
-            raise
-        # No token found in any auth*.yaml
-        raise ValueError(
-            "No valid Replicate token found via 1Password. Ensure a USER-FILES/01.CONFIG/auth*.yaml "
-            "exists with 'replicate.item_name' and 'replicate.field_name'."
-        )
-
-    # Explicit env fallback path
-    api_token = get_replicate_api_token_from_env()
-    if not api_token:
-        raise ValueError(
-            "REPLICATE_API_TOKEN not found in environment. Either provide auth*.yaml for 1Password auth "
-            "or set REPLICATE_API_TOKEN."
-        )
-    return api_token
+    try:
+        api_token = get_replicate_api_token_from_op(config_name)
+        if api_token:
+            return api_token
+    except (AuthError, FileNotFoundError) as e:
+        from loguru import logger
+        logger.error(f"1Password authentication error: {e}")
+        raise
+    
+    # No token found in any auth*.yaml
+    raise ValueError(
+        "No valid Replicate token found via 1Password. Ensure a USER-FILES/01.CONFIG/auth*.yaml "
+        "exists with 'replicate.item_name' and 'replicate.field_name'."
+    )
