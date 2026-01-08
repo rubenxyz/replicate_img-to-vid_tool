@@ -19,7 +19,14 @@ Files must have matching names across three directories:
 
 ### Output Structure
 Each video generation creates:
-- `{prompt_filename}.mp4` - The generated video (named after the prompt file)
+- `{prompt_filename}_YYMMDD_HHMMSS.mp4` - The generated video with timestamp
+  - **Bracketed timestamps** `[YYMMDD_HHMMSS]` are replaced with download time (keep brackets)
+  - **Unbracketed timestamps** `YYMMDD_HHMMSS` (as suffix) are replaced with download time (no brackets)
+  - If no timestamp exists, it's added as suffix (no brackets)
+  - Examples:
+    - `video_[250118_143022].md` → `video_[260108_165744].mp4` (bracketed stays bracketed)
+    - `frame0145-260101_220134.md` → `frame0145-260108_165744.mp4` (unbracketed stays unbracketed)
+    - `my_video.md` → `my_video_260108_165744.mp4` (timestamp added without brackets)
 - `VIDEO_REPORT.md` - Human-readable report with duration adjustment info
 - `generation_payload.json` - Complete API request/response with duration config
 - `generation.log` - Verbose generation log

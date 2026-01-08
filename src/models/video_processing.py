@@ -1,16 +1,15 @@
 """Video processing context models."""
+
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Any, Optional, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ..api.async_client import AsyncReplicateClient
+from typing import Dict, Any, Optional
 
 
 @dataclass
 class VideoProcessingContext:
     """Context for processing a single video."""
-    client: 'AsyncReplicateClient'
+
+    client: Any  # Supports AsyncReplicateClient, AsyncReplicateClientEnhanced, etc.
     prompt_file: Path
     image_url_file: Path
     num_frames_file: Path
@@ -23,6 +22,7 @@ class VideoProcessingContext:
 @dataclass
 class VideoRequest:
     """Request data for video generation."""
+
     model_name: str
     image_url: str
     prompt: str
