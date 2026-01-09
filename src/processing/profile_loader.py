@@ -33,6 +33,10 @@ def load_single_profile(yaml_file: Path) -> Dict[str, Any]:
     # Extract optional image_url parameter name (defaults to "image")
     image_url_param = profile_data.get('image_url', 'image')
     
+    # Support generate_audio at root level (legacy/convenience support)
+    if 'generate_audio' in profile_data:
+        params['generate_audio'] = profile_data['generate_audio']
+    
     # Validate and extract optional prompt modifications
     prompt_prefix, prompt_suffix = validator.validate_prompt_modifications(profile_data, yaml_file)
 
