@@ -4,21 +4,21 @@
 
 # Model configuration for Replicate
 Model:
-  endpoint: kwaivgi/kling-v2.5-turbo-pro
-  code-nickname: kling25turbo
-
+  endpoint: kwaivgi/kling-v2.6
+  code-nickname: kling26
 # Pricing configuration (Replicate charges per second of compute)
 pricing:
   # Kling 2.5 Turbo pricing on Replicate
   cost_per_second: 0.07 # USD per second of compute time
 
 # Image URL parameter name mapping
-image_url: image
+image_url: start_image
+generate_audio: False
 
 # Optional prompt suffix - will be appended to all prompts for this profile
 # Use this to add consistent phrases/style directions to every video generation
 # Example: "cinematic lighting, high quality"
-prompt_suffix: " No digital zoom, pure physical camera movement, ultra-sharp focus, 4K, 60 fps."
+prompt_suffix: " Ultra-sharp focus, 4K, 60 fps."
 
 # Duration handling
 duration_type: seconds
@@ -31,4 +31,4 @@ duration_param_name: duration
 params:
   aspect_ratio: "16:9"
   guidance_scale: 0.5
-  negative_prompt: "motion blur, lens breathing, distortion, grain, artifacts, noise, deformation"
+  negative_prompt: "motion blur, digital zoom, lens breathing, distortion, grain, artifacts, noise, deformation"

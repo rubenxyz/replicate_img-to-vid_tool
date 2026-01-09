@@ -7,6 +7,7 @@ from .api.client import ReplicateClient
 from .config.settings import INPUT_DIR, PROFILES_DIR, OUTPUT_DIR
 from .processing.hybrid_processor import process_matrix_hybrid
 from .models.processing import ProcessingContext
+from .models.video_processing import APIClientConfig
 from .output.reporter import create_success_report, create_cost_report
 from .utils.enhanced_logging import setup_dual_logging
 from .utils.verbose_output import log_stage_emoji
@@ -39,8 +40,9 @@ def main() -> int:
         validate_input_directories(INPUT_DIR, PROFILES_DIR)
         logger.success("All input directories validated")
 
-        # Initialize client
-        client = ReplicateClient(api_token=api_key)
+        # Initialize client with config
+        config = APIClientConfig(api_token=api_key)
+        client = ReplicateClient(config=config)
 
         # Create processing context
         context = ProcessingContext(

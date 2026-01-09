@@ -8,6 +8,7 @@ from .api.client import ReplicateClient
 from .config.settings import INPUT_DIR, PROFILES_DIR, OUTPUT_DIR
 from .processing.processor import process_matrix
 from .models.processing import ProcessingContext
+from .models.video_processing import APIClientConfig
 from .output.reporter import create_success_report, create_cost_report
 
 # Lazy import for adjustments_reporter - only loaded when needed
@@ -29,8 +30,9 @@ def main() -> int:
         # Validate input directories
         validate_input_directories(INPUT_DIR, PROFILES_DIR)
 
-        # Initialize client
-        client = ReplicateClient(api_token=api_key)
+        # Initialize client with config
+        config = APIClientConfig(api_token=api_key)
+        client = ReplicateClient(config=config)
 
         # Process matrix with progress bar
         logger.info("Starting video generation matrix processing")

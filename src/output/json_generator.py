@@ -1,58 +1,44 @@
 """JSON payload generation for video documentation."""
-from pathlib import Path
+
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any
+
+from ..models.generation import GenerationContext
 
 
-class JSONGenerator:
-    """Generator for JSON payloads and documentation."""
-    
-    @staticmethod
-    def create_payload(profile: Dict[str, Any], image_url: str, prompt: str,
-                      params: Dict[str, Any], video_url: str, video_path: Path,
-                      prompt_file: Path, image_url_file: Path, 
-                      num_frames_file: Path, adjustment_info: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """
-        Create JSON payload for documentation.
-        
-        Args:
-            profile: Profile configuration dictionary
-            image_url: Source image URL
-            prompt: Motion prompt text
-            params: Generation parameters
-            video_url: Generated video URL
-            video_path: Local video file path
-            prompt_file: Path to prompt file
-            image_url_file: Path to image URL file
-            num_frames_file: Path to num frames file
-            adjustment_info: Optional duration adjustment information
-            
-        Returns:
-            Dictionary containing complete generation payload
-        """
-        payload = {
-            "timestamp": datetime.now().isoformat(),
-            "model": profile['model_id'],
-            "profile_name": profile['name'],
-            "duration_config": profile.get('duration_config', {}),
-            "request": {
-                "image_url": image_url,
-                "prompt": prompt,
-                **params
-            },
-            "response": {
-                "video_url": video_url,
-                "local_path": str(video_path)
-            },
-            "source_files": {
-                "prompt_file": str(prompt_file),
-                "image_url_file": str(image_url_file),
-                "num_frames_file": str(num_frames_file)
-            }
-        }
-        
-        # Add adjustment info if present
-        if adjustment_info and adjustment_info.get('reason'):
-            payload['duration_adjustment'] = adjustment_info
-        
-        return payload
+def generate_json_payload(context: GenerationContext) -> Dict[str, Any]:
+    """
+    Create JSON payload for documentation from generation context.
+
+    Args:
+        context: GenerationContext with all generation data
+
+    Returns:
+        Dictionary containing complete generation payload
+    """
+    payload = {
+        "timestamp": datetime.now().isoformat(),
+        "model": context.profile["model_id"],
+        "profile_name": context.profile["name"],
+        "duration_config": context.profile.get("duration_config", {}),
+        "request": {
+            "image_url": context.image_url,
+            "prompt": context.prompt,
+            **context.params,
+        },
+        "response": {
+            "video_url": context.video_url,
+            "local_path": str(context.video_path),
+        },
+        "source_files": {
+            "prompt_file": str(context.prompt_file),
+            "image_url_file": str(context.image_url_file),
+            "num_frames_file": str(context.num_frames_file),
+        },
+    }
+
+    # Add adjustment info if present
+    if context.adjustment_info and context.adjustment_info.get("reason"):
+        payload["duration_adjustment"] = context.adjustment_info
+
+    return payload

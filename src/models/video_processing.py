@@ -20,6 +20,30 @@ class VideoProcessingContext:
 
 
 @dataclass
+class APIClientConfig:
+    """Configuration for API clients."""
+
+    api_token: str
+    poll_interval: int = 3
+    max_wait_time: int = 1200
+    max_retries: int = 3
+    rate_limit_retry_delay: int = 60
+
+
+@dataclass
+class VideoGenerationRequest:
+    """Request for generating and downloading a video."""
+
+    client: Any  # ReplicateClient or async variants
+    profile: Dict[str, Any]
+    image_url: str
+    prompt: str
+    params: Dict[str, Any]
+    output_dir: Path
+    markdown_file: Path
+
+
+@dataclass
 class VideoRequest:
     """Request data for video generation."""
 

@@ -20,10 +20,10 @@ from ..utils.filename_utils import generate_video_filename
 from ..models.generation import GenerationContext
 from ..models.processing import ProcessingContext
 from ..models.triplet import MarkdownJob
-from ..models.video_processing import VideoProcessingContext
+from ..models.video_processing import VideoProcessingContext, APIClientConfig
 
 # Local imports - Processing
-from .cost_calculator import calculate_video_cost
+from .cost_calculator import calculate_cost_from_params
 from .input_discovery import discover_markdown_jobs, parse_markdown_job
 from .output_generator import save_generation_files
 from .profile_loader import load_active_profiles
@@ -57,9 +57,8 @@ def _setup_processing(
 ) -> Tuple[AsyncReplicateClientEnhanced, List[MarkdownJob], List, Path]:
     """Setup processing environment and discover inputs."""
     # Create enhanced async client with alive-progress animation
-    async_client = AsyncReplicateClientEnhanced(
-        api_token=context.client.api_token, poll_interval=3
-    )
+    config = APIClientConfig(api_token=context.client.api_token, poll_interval=3)
+    async_client = AsyncReplicateClientEnhanced(config=config)
 
     # Discover markdown jobs
     log_stage_emoji("preparing", "Discovering markdown jobs...")
@@ -281,18 +280,7 @@ def _process_video_verbose(
     download_video(video_url, video_path)
 
     # Calculate cost based on actual video duration
-    # Extract duration from params (could be 'duration', 'num_frames', or 'seconds')
-    param_name = context.profile["duration_config"]["duration_param_name"]
-    video_duration = params.get(param_name, num_frames)
-
-    # Convert to seconds if needed
-    if context.profile["duration_config"]["duration_type"] == "frames":
-        fps = context.profile["duration_config"]["fps"]
-        video_duration_seconds = int(video_duration / fps)
-    else:  # already in seconds
-        video_duration_seconds = video_duration
-
-    video_cost = calculate_video_cost(context.profile, video_duration_seconds)
+    video_cost = calculate_cost_from_params(context.profile, params, num_frames)
 
     # Update progress: saving phase
     epic_progress.update_status(

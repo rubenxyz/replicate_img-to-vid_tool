@@ -9,7 +9,7 @@ from rich.progress import Progress
 from ..api.client import ReplicateClient
 from .input_discovery import discover_markdown_jobs, parse_markdown_job
 from .profile_loader import load_active_profiles
-from .cost_calculator import calculate_video_cost
+from .cost_calculator import calculate_cost_from_params
 from .output_generator import save_generation_files
 from ..utils.filename_utils import generate_video_filename
 from .duration_handler import (
@@ -20,6 +20,7 @@ from .duration_handler import (
 from ..models.generation import GenerationContext
 from ..models.processing import ProcessingContext
 from ..models.triplet import MarkdownJob
+from ..models.video_processing import VideoGenerationRequest
 from .generation_logger import log_generation_start, log_generation_complete
 
 
@@ -207,23 +208,19 @@ def _process_single_video(
         )
 
         # Generate and download video
-        video_url, video_path = _generate_and_download_video(
-            client, profile, image_url, prompt, params, video_dir, job.markdown_file
+        gen_request = VideoGenerationRequest(
+            client=client,
+            profile=profile,
+            image_url=image_url,
+            prompt=prompt,
+            params=params,
+            output_dir=video_dir,
+            markdown_file=job.markdown_file,
         )
+        video_url, video_path = _generate_and_download_video(gen_request)
 
         # Calculate cost based on actual video duration
-        # Extract duration from params (could be 'duration', 'num_frames', or 'seconds')
-        param_name = profile["duration_config"]["duration_param_name"]
-        video_duration = params.get(param_name, num_frames)
-
-        # Convert to seconds if needed
-        if profile["duration_config"]["duration_type"] == "frames":
-            fps = profile["duration_config"]["fps"]
-            video_duration_seconds = int(video_duration / fps)
-        else:  # already in seconds
-            video_duration_seconds = video_duration
-
-        video_cost = calculate_video_cost(profile, video_duration_seconds)
+        video_cost = calculate_cost_from_params(profile, params, num_frames)
 
         # Create generation context with all data
         # Note: We save the original prompt (without suffix) in context for documentation
@@ -294,33 +291,33 @@ def _create_video_directory(
     return video_dir
 
 
-def _generate_and_download_video(
-    client: ReplicateClient,
-    profile: Dict[str, Any],
-    image_url: str,
-    prompt: str,
-    params: Dict[str, Any],
-    video_dir: Path,
-    markdown_file: Path,
-) -> Tuple[str, Path]:
-    """Generate video and download it."""
+def _generate_and_download_video(request: VideoGenerationRequest) -> Tuple[str, Path]:
+    """
+    Generate video and download it.
+
+    Args:
+        request: VideoGenerationRequest with all required parameters
+
+    Returns:
+        Tuple of (video_url, video_path)
+    """
     from .video_downloader import download_video
 
     # Generate video using Replicate API
-    video_url = client.generate_video(
-        model_name=profile["model_id"],
-        image_url=image_url,
-        prompt=prompt,
-        params=params,
-        image_url_param=profile.get("image_url_param", "image"),
+    video_url = request.client.generate_video(
+        model_name=request.profile["model_id"],
+        image_url=request.image_url,
+        prompt=request.prompt,
+        params=request.params,
+        image_url_param=request.profile.get("image_url_param", "image"),
     )
 
     if not video_url:
-        raise Exception(f"Failed to generate video for {markdown_file.name}")
+        raise Exception(f"Failed to generate video for {request.markdown_file.name}")
 
     # Download video to output directory
-    video_filename = generate_video_filename(markdown_file.name)
-    video_path = video_dir / video_filename
+    video_filename = generate_video_filename(request.markdown_file.name)
+    video_path = request.output_dir / video_filename
     download_video(video_url, video_path)
 
     return video_url, video_path

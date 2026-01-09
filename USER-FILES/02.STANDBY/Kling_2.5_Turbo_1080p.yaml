@@ -1,0 +1,34 @@
+# =============================================================================
+# Kling 2.5 Turbo 1080p Video Generation Profile
+# =============================================================================
+
+# Model configuration for Replicate
+Model:
+  endpoint: kwaivgi/kling-v2.5-turbo-pro
+  code-nickname: kling25turbo
+
+# Pricing configuration (Replicate charges per second of compute)
+pricing:
+  # Kling 2.5 Turbo pricing on Replicate
+  cost_per_second: 0.07 # USD per second of compute time
+
+# Image URL parameter name mapping
+image_url: image
+
+# Optional prompt suffix - will be appended to all prompts for this profile
+# Use this to add consistent phrases/style directions to every video generation
+# Example: "cinematic lighting, high quality"
+prompt_suffix: " Ultra-sharp focus, 4K, 60 fps."
+
+# Duration handling
+duration_type: seconds
+fps: 24
+duration_min: 5
+duration_max: 10
+duration_param_name: duration
+
+# Generation parameters for Kling model
+params:
+  aspect_ratio: "16:9"
+  guidance_scale: 0.5
+  negative_prompt: "motion blur, digital zoom, lens breathing, distortion, grain, artifacts, noise, deformation"
