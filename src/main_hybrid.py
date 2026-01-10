@@ -11,6 +11,7 @@ from .models.video_processing import APIClientConfig
 from .output.reporter import create_success_report, create_cost_report
 from .utils.enhanced_logging import setup_dual_logging
 from .utils.verbose_output import log_stage_emoji
+from .utils.cleanup import archive_and_cleanup_logs
 from .validation.environment import validate_environment, validate_input_directories
 from .exceptions import VideoGenerationError, AuthenticationError, InputValidationError
 
@@ -76,6 +77,13 @@ def main() -> int:
                 total_processed=results["total"],
             )
             logger.info(f"⚠️ {len(results['adjustments'])} duration adjustments made")
+
+        # Archive and cleanup log files
+        log_stage_emoji("saving", "Archiving log files...")
+        try:
+            archive_and_cleanup_logs(output_dir)
+        except Exception as e:
+            logger.warning(f"Failed to cleanup logs (non-fatal): {e}")
 
         # Final summary (already printed by hybrid processor)
         logger.info("═" * 70)

@@ -13,6 +13,7 @@ from .output.reporter import create_success_report, create_cost_report
 
 # Lazy import for adjustments_reporter - only loaded when needed
 from .utils.logging import setup_logging
+from .utils.cleanup import archive_and_cleanup_logs
 from .validation.environment import validate_environment, validate_input_directories
 from .exceptions import VideoGenerationError, AuthenticationError, InputValidationError
 
@@ -68,6 +69,12 @@ def main() -> int:
         logger.success(f"✅ Completed: {results['success']}/{results['total']} videos")
         logger.info(f"Total cost: ${results['cost']:.2f}")
         logger.info(f"Output directory: {output_dir}")
+
+        # Archive and cleanup log files
+        try:
+            archive_and_cleanup_logs(output_dir)
+        except Exception as e:
+            logger.warning(f"Failed to cleanup logs (non-fatal): {e}")
 
         return 0
 
