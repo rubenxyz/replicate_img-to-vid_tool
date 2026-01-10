@@ -19,8 +19,15 @@ console = Console(stderr=True, force_terminal=True)
 
 def setup_verbose_output() -> None:
     """Configure console output for verbose mode with minimal colors."""
-    # Remove default handler
-    logger.remove()
+    # Remove initial console handler if it exists (preserve file logging)
+    try:
+        from .enhanced_logging import CONSOLE_HANDLER_ID
+        if CONSOLE_HANDLER_ID is not None:
+            logger.remove(CONSOLE_HANDLER_ID)
+    except (ImportError, ValueError):
+        # Fallback: don't remove anything if we can't identify the console handler
+        # This prevents nuking the file handler
+        pass
     
     # Add console handler with INFO level and minimal colors
     logger.add(

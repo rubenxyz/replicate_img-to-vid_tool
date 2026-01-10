@@ -4,6 +4,10 @@ from loguru import logger
 import sys
 
 
+# Global variable to track console handler ID
+CONSOLE_HANDLER_ID = None
+
+
 def setup_dual_logging(enable_verbose: bool = True) -> None:
     """
     Configure dual logging - file and console.
@@ -11,6 +15,8 @@ def setup_dual_logging(enable_verbose: bool = True) -> None:
     Args:
         enable_verbose: Whether to enable verbose console output
     """
+    global CONSOLE_HANDLER_ID
+    
     # Remove default handler
     logger.remove()
     
@@ -29,7 +35,7 @@ def setup_dual_logging(enable_verbose: bool = True) -> None:
     
     if enable_verbose:
         # Add console handler with INFO level and colors
-        logger.add(
+        CONSOLE_HANDLER_ID = logger.add(
             sys.stderr,
             level="INFO",
             format="<level>{time:HH:mm:ss}</level> | <level>{level: <8}</level> | {message}",

@@ -200,10 +200,6 @@ def _process_video_hybrid(
     # Apply prompt modifications (prefix/suffix) if configured
     prompt = _apply_prompt_modifications(prompt, context.profile)
 
-    # Create output directory
-    video_dir = context.run_dir / video_name
-    video_dir.mkdir(exist_ok=True)
-
     # Prepare parameters
     from .processor import _prepare_generation_params
 
@@ -244,7 +240,7 @@ def _process_video_hybrid(
     hybrid.log_phase_start("Downloading", f"URL: {video_url[:60]}...")
 
     video_filename = generate_video_filename(job.markdown_file.name)
-    video_path = video_dir / video_filename
+    video_path = context.run_dir / video_filename
     download_video(video_url, video_path)
 
     # Calculate cost
@@ -258,7 +254,7 @@ def _process_video_hybrid(
         prompt_file=job.markdown_file,
         image_url_file=job.markdown_file,
         num_frames_file=job.markdown_file,
-        output_dir=video_dir,
+        output_dir=context.run_dir,
         prompt=prompt,
         image_url=image_url,
         num_frames=num_frames,
@@ -269,6 +265,8 @@ def _process_video_hybrid(
         cost=video_cost,
         adjustment_info=adjustment_info,
     )
-    save_generation_files(gen_context)
+    # Save all documentation with video filename as prefix
+    video_filename_stem = video_path.stem
+    save_generation_files(gen_context, video_filename_stem)
 
     return video_cost, adjustment_info

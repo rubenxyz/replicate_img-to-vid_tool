@@ -219,10 +219,8 @@ def _process_video_verbose(
     # Apply prompt modifications (prefix/suffix) if configured
     prompt = _apply_prompt_modifications(prompt, context.profile)
 
-    # Create output directory
+    # Generate processing identifier for logging
     video_name = f"{job.markdown_file.stem}_X_{context.profile['name']}"
-    video_dir = context.run_dir / video_name
-    video_dir.mkdir(exist_ok=True)
 
     # Prepare parameters
     params, adjustment_info = _prepare_params_verbose(context.profile, num_frames)
@@ -276,7 +274,7 @@ def _process_video_verbose(
     )
 
     video_filename = generate_video_filename(job.markdown_file.name)
-    video_path = video_dir / video_filename
+    video_path = context.run_dir / video_filename
     download_video(video_url, video_path)
 
     # Calculate cost based on actual video duration
@@ -295,7 +293,7 @@ def _process_video_verbose(
         prompt_file=job.markdown_file,
         image_url_file=job.markdown_file,
         num_frames_file=job.markdown_file,
-        output_dir=video_dir,
+        output_dir=context.run_dir,
         prompt=prompt,
         image_url=image_url,
         num_frames=num_frames,
@@ -306,7 +304,9 @@ def _process_video_verbose(
         cost=video_cost,
         adjustment_info=adjustment_info,
     )
-    save_generation_files(gen_context)
+    # Save all documentation with video filename as prefix
+    video_filename_stem = video_path.stem
+    save_generation_files(gen_context, video_filename_stem)
 
     log_stage_emoji("complete", f"Completed: {video_path.name} (${video_cost:.2f})")
 

@@ -192,11 +192,10 @@ def _process_single_video(
     original_prompt = prompt
     prompt = _apply_prompt_modifications(prompt, profile)
 
-    # Create output directory
-    video_dir = _create_video_directory(run_dir, job.markdown_file, profile)
-    subfolder_name = video_dir.name
+    # Generate processing identifier for logging
+    processing_name = f"{job.markdown_file.stem}_X_{profile['name']}"
 
-    logger.info(f"Processing: {subfolder_name}")
+    logger.info(f"Processing: {processing_name}")
 
     try:
         # Prepare parameters with duration handling
@@ -204,7 +203,7 @@ def _process_single_video(
 
         # Log generation start
         log_generation_start(
-            subfolder_name, profile, prompt, image_url, num_frames, params
+            processing_name, profile, prompt, image_url, num_frames, params
         )
 
         # Generate and download video
@@ -214,7 +213,7 @@ def _process_single_video(
             image_url=image_url,
             prompt=prompt,
             params=params,
-            output_dir=video_dir,
+            output_dir=run_dir,
             markdown_file=job.markdown_file,
         )
         video_url, video_path = _generate_and_download_video(gen_request)
@@ -229,7 +228,7 @@ def _process_single_video(
             prompt_file=job.markdown_file,
             image_url_file=job.markdown_file,  # Same file contains all data
             num_frames_file=job.markdown_file,  # Same file contains all data
-            output_dir=video_dir,
+            output_dir=run_dir,
             prompt=original_prompt,
             image_url=image_url,
             num_frames=num_frames,
@@ -241,8 +240,9 @@ def _process_single_video(
             adjustment_info=adjustment_info,
         )
 
-        # Save all documentation
-        save_generation_files(context)
+        # Save all documentation with video filename as prefix
+        video_filename_stem = video_path.stem
+        save_generation_files(context, video_filename_stem)
 
         # Log completion
         log_generation_complete(video_path, video_cost)
@@ -279,16 +279,6 @@ def _prepare_generation_params(
         params["fps"] = profile["duration_config"]["fps"]
 
     return params, adjustment_info
-
-
-def _create_video_directory(
-    run_dir: Path, markdown_file: Path, profile: Dict[str, Any]
-) -> Path:
-    """Create output directory for video generation."""
-    subfolder_name = f"{markdown_file.stem}_X_{profile['name']}"
-    video_dir = run_dir / subfolder_name
-    video_dir.mkdir(exist_ok=True)
-    return video_dir
 
 
 def _generate_and_download_video(request: VideoGenerationRequest) -> Tuple[str, Path]:
