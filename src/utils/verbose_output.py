@@ -1,35 +1,37 @@
 """Verbose terminal output configuration for real-time visibility."""
+
 import sys
 import time
-from typing import Optional, Any
+from typing import TYPE_CHECKING, Optional, Any, Union, List, Dict
 from loguru import logger
-from rich.console import Console
-from rich.progress import (
-    Progress, SpinnerColumn, TextColumn, BarColumn, 
-    TaskProgressColumn, TimeElapsedColumn, TimeRemainingColumn
-)
-from rich.layout import Layout
-from rich.panel import Panel
-from rich.live import Live
+
+if TYPE_CHECKING:
+    from alive_progress import alive_bar
+
+    ALIVE_PROGRESS_AVAILABLE = True
+else:
+    try:
+        from alive_progress import alive_bar
+
+        ALIVE_PROGRESS_AVAILABLE = True
+    except ImportError:
+        ALIVE_PROGRESS_AVAILABLE = False
+        alive_bar = None
 
 
-# Create console for output to stderr (won't interfere with stdout)
-console = Console(stderr=True, force_terminal=True)
+console_stderr = sys.stderr
 
 
 def setup_verbose_output() -> None:
     """Configure console output for verbose mode with minimal colors."""
-    # Remove initial console handler if it exists (preserve file logging)
     try:
         from .enhanced_logging import CONSOLE_HANDLER_ID
+
         if CONSOLE_HANDLER_ID is not None:
             logger.remove(CONSOLE_HANDLER_ID)
     except (ImportError, ValueError):
-        # Fallback: don't remove anything if we can't identify the console handler
-        # This prevents nuking the file handler
         pass
-    
-    # Add console handler with INFO level and minimal colors
+
     logger.add(
         sys.stderr,
         level="INFO",
@@ -37,10 +39,9 @@ def setup_verbose_output() -> None:
         colorize=True,
         backtrace=True,
         diagnose=True,
-        enqueue=True,  # Thread-safe for background polling
+        enqueue=True,
     )
-    
-    # Configure color scheme - only ERROR and SUCCESS
+
     logger.level("ERROR", color="<red><bold>")
     logger.level("SUCCESS", color="<green><bold>")
     logger.level("INFO", color="<white>")
@@ -48,32 +49,56 @@ def setup_verbose_output() -> None:
     logger.level("DEBUG", color="<dim>")
 
 
-def create_progress_display() -> Progress:
-    """Create enhanced progress bar with additional columns."""
-    return Progress(
-        SpinnerColumn(),
-        TextColumn("[bold blue]{task.description}"),
-        BarColumn(),
-        TaskProgressColumn(),
-        TimeElapsedColumn(),
-        TimeRemainingColumn(),
-        TextColumn("[dim]{task.fields[status]}"),
-        console=console,
-        refresh_per_second=2,
-    )
+class VerboseProgress:
+    """Progress bar for verbose mode using alive-progress."""
+
+    def __init__(self, **kwargs: Any) -> None:
+        self._bar: Any = None
+        self._kwargs = kwargs
+
+    def __enter__(self) -> "VerboseProgress":
+        if ALIVE_PROGRESS_AVAILABLE and alive_bar:
+            self._bar = alive_bar(**self._kwargs)
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> bool:
+        if self._bar is not None:
+            try:
+                self._bar.__exit__(exc_type, exc_val, exc_tb)
+            except Exception:
+                pass
+        return False
+
+    def __call__(self, advance: Union[int, float] = 1) -> None:
+        if self._bar is not None:
+            try:
+                self._bar(advance)
+            except Exception:
+                pass
+
+    @property
+    def text(self) -> str:
+        if self._bar is not None and hasattr(self._bar, "text"):
+            return str(self._bar.text)
+        return ""
+
+    @text.setter
+    def text(self, value: str) -> None:
+        if self._bar is not None and hasattr(self._bar, "text"):
+            self._bar.text = value
 
 
-def create_layout_display(progress: Progress) -> Layout:
-    """Create Rich layout with progress bar and log area."""
-    layout = Layout()
-    
-    # Simple two-panel layout
-    layout.split_column(
-        Layout(Panel(progress, title="Progress", border_style="blue"), size=5),
-        Layout(name="logs", ratio=1)
+def create_progress_display() -> VerboseProgress:
+    """Create enhanced progress bar."""
+    return VerboseProgress(
+        title="Progress",
+        bar="smooth",
+        spinner="dots_waves",
+        dual_line=True,
+        stats=True,
+        monitor=True,
+        elapsed=True,
     )
-    
-    return layout
 
 
 def log_stage_emoji(stage: str, message: str) -> None:
@@ -88,53 +113,61 @@ def log_stage_emoji(stage: str, message: str) -> None:
         "saving": "💾",
         "complete": "✅",
         "failed": "❌",
-        "retry": "🔄"
+        "retry": "🔄",
     }
-    
+
     emoji = emojis.get(stage.lower(), "▶️")
     logger.info(f"{emoji} {message}")
 
 
-def show_error_with_retry(error: Exception, attempt: int, max_attempts: int, wait_time: int) -> None:
+def show_error_with_retry(
+    error: Exception, attempt: int, max_attempts: int, wait_time: int
+) -> None:
     """Display full error traceback with retry countdown."""
     logger.error(f"Attempt {attempt}/{max_attempts} failed:")
     logger.exception(error)
-    
+
     if attempt < max_attempts:
         logger.warning(f"🔄 Retrying in {wait_time} seconds...")
-        # Countdown display
         for remaining in range(wait_time, 0, -1):
-            console.print(f"  [{remaining}s]", end="\r")
+            console_stderr.write(f"  [{remaining}s]\r")
+            console_stderr.flush()
             time.sleep(1)
-        console.print("         ", end="\r")  # Clear countdown
+        console_stderr.write("         \r")
+
+
+def show_project_header(profiles: List[Dict[str, Any]]) -> None:
+    """
+    Display project name header in console output.
+
+    Args:
+        profiles: List of profile configurations with optional project_name
+    """
+    # Collect unique project names
+    project_names = set()
+    for profile in profiles:
+        project_name = profile.get("project_name")
+        if project_name:
+            project_names.add(project_name)
+
+    if project_names:
+        # Display in a banner format
+        for name in sorted(project_names):
+            logger.info(f"[bold cyan]━━━━━━━ {name} ━━━━━━━[/]")
 
 
 class VerboseContext:
     """Context manager for verbose output mode."""
-    
+
     def __init__(self) -> None:
-        self.progress: Optional[Progress] = None
-        self.layout: Optional[Layout] = None
-        self.live: Optional[Live] = None
-        
-    def __enter__(self) -> 'VerboseContext':
+        self.progress: Optional[VerboseProgress] = None
+
+    def __enter__(self) -> "VerboseContext":
         setup_verbose_output()
         self.progress = create_progress_display()
         return self
-        
+
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> bool:
-        if self.live:
-            self.live.stop()
+        if self.progress:
+            self.progress.__exit__(exc_type, exc_val, exc_tb)
         return False
-        
-    def start_live_display(self) -> None:
-        """Start live display with layout."""
-        if not self.live:
-            self.layout = create_layout_display(self.progress)
-            self.live = Live(self.layout, console=console, refresh_per_second=2)
-            self.live.start()
-            
-    def update_logs(self, content: str) -> None:
-        """Update the logs panel."""
-        if self.layout:
-            self.layout["logs"].update(Panel(content, title="Logs", border_style="dim"))

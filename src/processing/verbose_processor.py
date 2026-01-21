@@ -60,28 +60,38 @@ def _setup_processing(
     config = APIClientConfig(api_token=context.client.api_token, poll_interval=3)
     async_client = AsyncReplicateClientEnhanced(config=config)
 
-    # Discover markdown jobs
-    log_stage_emoji("preparing", "Discovering markdown jobs...")
-    markdown_files = discover_markdown_jobs(context.input_dir)
-    jobs = [parse_markdown_job(md_file) for md_file in markdown_files]
-    logger.success(f"Found {len(jobs)} markdown jobs")
-
-    # Load profiles
+    # Load profiles FIRST (they may specify custom input paths)
     log_stage_emoji("preparing", "Loading video profiles...")
     active_profiles = load_active_profiles(context.profiles_dir)
     logger.success(f"Loaded {len(active_profiles)} profiles")
 
-    # Create output directory
+    # Discover markdown jobs using custom input path from profile if available
+    log_stage_emoji("preparing", "Discovering markdown jobs...")
+
+    # Get custom input path from first profile (if exists)
+    # For verbose processor, we use the first profile's input path
+    custom_input_path = None
+    if active_profiles:
+        custom_input_path = active_profiles[0].get("custom_input_path")
+
+    markdown_files = discover_markdown_jobs(context.input_dir, custom_input_path)
+    jobs = [parse_markdown_job(md_file) for md_file in markdown_files]
+    logger.success(f"Found {len(jobs)} markdown jobs")
+
+    # Create output directory - use custom output path from profile if available
     timestamp = datetime.now().strftime("%y%m%d_%H%M%S")
-    if len(active_profiles) == 1:
-        # Sanitize profile name for filesystem
-        profile_suffix = (
-            str(active_profiles[0]["name"]).strip().replace("/", "-").replace(" ", "_")
-        )
-        dir_name = f"{timestamp}_{profile_suffix}"
-    else:
-        dir_name = f"{timestamp}_VIDEO"
-    run_dir = context.output_dir / dir_name
+
+    # Determine base output directory
+    custom_output_path = None
+    if active_profiles:
+        custom_output_path = active_profiles[0].get("custom_output_path")
+
+    base_output_dir = (
+        Path(custom_output_path) if custom_output_path else context.output_dir
+    )
+
+    dir_name = f"{timestamp}_IMG-TO-VID"
+    run_dir = base_output_dir / dir_name
     run_dir.mkdir(parents=True, exist_ok=True)
     logger.info(f"📁 Output: {run_dir}")
 
@@ -246,9 +256,7 @@ def _process_video_verbose(
     logger.info("═" * 60)
 
     # Create API callback using epic progress helper
-    progress_callback = create_api_callback(
-        context.progress, context.task_id, epic_progress.console
-    )
+    progress_callback = create_api_callback(context.progress, context.task_id)
 
     video_url = context.client.generate_video_with_polling(
         model_name=context.profile["model_id"],

@@ -32,31 +32,27 @@ def validate_environment() -> str:
 
 def validate_input_directories(input_dir: Path, profiles_dir: Path) -> None:
     """
-    Validate that input directory contains markdown job files and profiles exist.
+    Validate that profiles exist. Markdown file validation is deferred until
+    after profiles are loaded, since profiles may specify custom input paths.
 
     Args:
-        input_dir: Directory containing markdown job files
+        input_dir: Default directory for markdown job files (may be overridden by profiles)
         profiles_dir: Directory containing profile YAML files
 
     Raises:
-        InputValidationError: If required directories are empty or don't exist
+        InputValidationError: If required directories don't exist or no profiles found
     """
-    # Check input directory exists
+    # Check default input directory exists (profiles may override this)
     if not input_dir.exists():
-        error_msg = f"Input directory does not exist: {input_dir}"
+        error_msg = f"Default input directory does not exist: {input_dir}"
         logger.error(error_msg)
         raise InputValidationError(error_msg)
 
-    # Check for markdown job files
-    if not list(input_dir.glob("*.md")):
-        error_msg = f"No markdown (.md) job files found in {input_dir}"
-        logger.error(error_msg)
-        raise InputValidationError(error_msg)
-
-    # Check for profiles
+    # Check for profiles - this is required before we can check for markdown files
+    # since profiles may specify custom input paths
     if not list(profiles_dir.glob("*.yaml")) and not list(profiles_dir.glob("*.yml")):
         error_msg = f"No profiles found in {profiles_dir}"
         logger.error(error_msg)
         raise InputValidationError(error_msg)
 
-    logger.info("Input directory and profiles validated successfully")
+    logger.info("Profiles directory validated successfully")

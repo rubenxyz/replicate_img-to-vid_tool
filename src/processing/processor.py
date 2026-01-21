@@ -22,38 +22,102 @@ from ..models.processing import ProcessingContext
 from ..models.triplet import MarkdownJob
 from ..models.video_processing import VideoGenerationRequest
 from .generation_logger import log_generation_start, log_generation_complete
+from ..utils.path_validator import validate_custom_paths
 
 
 def _create_run_directory(
     output_dir: Path, active_profiles: List[Dict[str, Any]]
 ) -> Path:
-    """Create timestamped output directory for this run.
-    If exactly one profile is active, use its name as the suffix.
-    """
+    """Create timestamped output directory for this run."""
     timestamp = datetime.now().strftime("%y%m%d_%H%M%S")
-    if len(active_profiles) == 1:
-        # Sanitize profile name for filesystem
-        profile_suffix = (
-            str(active_profiles[0]["name"]).strip().replace("/", "-").replace(" ", "_")
-        )
-        dir_name = f"{timestamp}_{profile_suffix}"
-    else:
-        dir_name = f"{timestamp}_VIDEO"
+    dir_name = f"{timestamp}_IMG-TO-VID"
     run_dir = output_dir / dir_name
     run_dir.mkdir(parents=True, exist_ok=True)
     logger.info(f"Output directory: {run_dir}")
     return run_dir
 
 
+def _discover_jobs_for_profiles(
+    default_input_dir: Path, profiles: List[Dict[str, Any]]
+) -> Dict[str, List[MarkdownJob]]:
+    """
+    Discover markdown jobs for all profiles, handling custom input paths.
+
+    Args:
+        default_input_dir: Default input directory (USER-FILES/04.INPUT)
+        profiles: List of profile configurations
+
+    Returns:
+        Dictionary mapping input path (string) to list of MarkdownJob objects
+    """
+    # Collect unique input paths from all profiles
+    unique_paths: Dict[str, Path] = {str(default_input_dir): default_input_dir}
+
+    for profile in profiles:
+        custom_input = profile.get("custom_input_path")
+        if custom_input:
+            unique_paths[custom_input] = Path(custom_input)
+
+    # Discover jobs for each unique input path
+    jobs_by_path: Dict[str, List[MarkdownJob]] = {}
+
+    for path_str, path_obj in unique_paths.items():
+        try:
+            markdown_files = discover_markdown_jobs(
+                path_obj, path_str if path_str != str(default_input_dir) else None
+            )
+            jobs = [parse_markdown_job(md_file) for md_file in markdown_files]
+            jobs_by_path[path_str] = jobs
+            logger.info(f"Discovered {len(jobs)} jobs from {path_obj}")
+        except FileNotFoundError as e:
+            logger.warning(f"Input directory not found: {path_obj} - skipping")
+            jobs_by_path[path_str] = []
+
+    return jobs_by_path
+
+
+def _get_output_dir_for_profile(
+    default_output_dir: Path, profile: Dict[str, Any], run_timestamp: str
+) -> Path:
+    """
+    Get the output directory for a profile, creating subdirectory if needed.
+
+    Args:
+        default_output_dir: Default output directory (USER-FILES/05.OUTPUT)
+        profile: Profile configuration
+        run_timestamp: Timestamp for subdirectory naming
+
+    Returns:
+        Path to output directory for this profile
+    """
+    custom_output = profile.get("custom_output_path")
+
+    if custom_output:
+        output_dir = Path(custom_output)
+        # Create timestamped subdirectory within custom output path
+        profile_suffix = (
+            str(profile["name"]).strip().replace("/", "-").replace(" ", "_")
+        )
+        subdir_name = f"{run_timestamp}_{profile_suffix}"
+        output_dir = output_dir / subdir_name
+    else:
+        output_dir = default_output_dir
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    return output_dir
+
+
 def _process_all_videos(
     client: ReplicateClient,
-    jobs: List[MarkdownJob],
+    jobs_by_path: Dict[str, List[MarkdownJob]],
     active_profiles: List[Dict[str, Any]],
-    run_dir: Path,
+    default_output_dir: Path,
+    run_timestamp: str,
     progress: Optional[Progress] = None,
 ) -> Tuple[int, float, List[Dict[str, Any]]]:
     """Process all video generations in the matrix."""
-    total = len(jobs) * len(active_profiles)
+    # Calculate total operations
+    total = sum(len(jobs) for jobs in jobs_by_path.values()) * len(active_profiles)
     success_count = 0
     total_cost = 0.0
     all_adjustments = []
@@ -62,14 +126,28 @@ def _process_all_videos(
     if progress:
         task_id = progress.add_task("Generating videos", total=total)
 
-    for job in jobs:
-        for profile in active_profiles:
+    for profile in active_profiles:
+        # Get jobs for this profile's input path
+        custom_input = profile.get("custom_input_path", str(default_output_dir))
+        jobs = jobs_by_path.get(custom_input, [])
+
+        if not jobs:
+            logger.info(
+                f"No jobs found for profile {profile['name']} (input: {custom_input})"
+            )
+            continue
+
+        # Get output directory for this profile
+        profile_output_dir = _get_output_dir_for_profile(
+            default_output_dir, profile, run_timestamp
+        )
+
+        for job in jobs:
             # Process single video
             video_cost, adjustment_info = _process_single_video(
-                client, job, profile, run_dir
+                client, job, profile, profile_output_dir
             )
 
-            # Track adjustment if any
             if adjustment_info and adjustment_info.get("reason"):
                 adjustment_record = {
                     "markdown_file": job.markdown_file.name,
@@ -100,24 +178,35 @@ def process_matrix(context: ProcessingContext) -> Dict[str, Any]:
     Raises:
         Exception: On any processing failure (fail-fast)
     """
-    # 1. Discover markdown job files
-    markdown_files = discover_markdown_jobs(context.input_dir)
-    logger.info(f"Found {len(markdown_files)} markdown job files")
-
-    # 2. Parse markdown jobs
-    jobs = [parse_markdown_job(md_file) for md_file in markdown_files]
-
-    # 3. Load video profiles
+    # 1. Load video profiles
     active_profiles = load_active_profiles(context.profiles_dir)
     logger.info(f"Loaded {len(active_profiles)} video profiles")
 
-    # 4. Create timestamped output directory
-    run_dir = _create_run_directory(context.output_dir, active_profiles)
+    # 2. Validate custom paths for all profiles
+    for profile in active_profiles:
+        custom_input = profile.get("custom_input_path")
+        custom_output = profile.get("custom_output_path")
+        if custom_input or custom_output:
+            validate_custom_paths(
+                Path(custom_input) if custom_input else None,
+                Path(custom_output) if custom_output else None,
+            )
 
-    # 5. Process matrix sequentially
-    total = len(jobs) * len(active_profiles)
+    # 3. Discover markdown jobs for all profiles (handles custom input paths)
+    jobs_by_path = _discover_jobs_for_profiles(context.input_dir, active_profiles)
+
+    # Generate timestamp once for all output directories
+    run_timestamp = datetime.now().strftime("%y%m%d_%H%M%S")
+
+    # 4. Process matrix sequentially
+    total = sum(len(jobs) for jobs in jobs_by_path.values()) * len(active_profiles)
     success_count, total_cost, all_adjustments = _process_all_videos(
-        context.client, jobs, active_profiles, run_dir, context.progress
+        context.client,
+        jobs_by_path,
+        active_profiles,
+        context.output_dir,
+        run_timestamp,
+        context.progress,
     )
 
     return {
@@ -125,7 +214,7 @@ def process_matrix(context: ProcessingContext) -> Dict[str, Any]:
         "success": success_count,
         "failed": total - success_count,
         "cost": total_cost,
-        "output_dir": run_dir,
+        "output_dir": context.output_dir,
         "adjustments": all_adjustments,
     }
 

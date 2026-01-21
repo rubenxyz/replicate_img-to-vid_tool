@@ -36,7 +36,13 @@ def generate_markdown_report(context: GenerationContext) -> str:
 - **FPS**: {context.profile["duration_config"]["fps"]}
 - **Duration Type**: {context.profile["duration_config"]["duration_type"]}"""
 
-    return f"""# Video Generation Report
+    # Build header with optional project name
+    header = f"# Video Generation Report"
+    project_name = context.profile.get("project_name")
+    if project_name:
+        header = f"# {project_name}\n\n## Video Generation Report"
+
+    return f"""{header}
 
 ## Generation Details
 - **Generated**: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}

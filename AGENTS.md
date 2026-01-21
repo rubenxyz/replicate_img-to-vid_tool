@@ -38,6 +38,16 @@ Each video generation creates:
 Profiles now require duration configuration:
 
 ```yaml
+# Project configuration (OPTIONAL)
+# Display name shown in console output, logs, and reports
+project: "WALTZ WITH BASHIR"
+
+# Custom paths (OPTIONAL)
+# Override default USER-FILES/04.INPUT and USER-FILES/05.OUTPUT directories
+paths:
+  input: "/Users/ruben/Nextcloud/01 - PROJECTS/251230_WBT/02_GENERATIONS/@INPUT(img-to-vid)"
+  output: "/Users/ruben/Downloads/test"
+
 # Duration configuration (REQUIRED)
 duration_type: frames|seconds  # How to interpret duration
 fps: 24                        # Frames per second
@@ -62,6 +72,20 @@ params:
   aspect_ratio: "16:9"
   # Other model-specific parameters
 ```
+
+#### Project Configuration:
+- **project**: Optional display name for the project
+- Appears in console header during execution
+- Included in log filename (if single profile with project name)
+- Shown as title in generated VIDEO_REPORT.md
+- Can be a simple string or a dictionary with `name` field
+
+#### Custom Paths:
+- **paths.input**: Override the default input directory (USER-FILES/04.INPUT)
+- **paths.output**: Override the default output directory (USER-FILES/05.OUTPUT)
+- Paths are validated to exist before processing starts
+- If custom paths are not specified, defaults to USER-FILES/04.INPUT and USER-FILES/05.OUTPUT
+- Each profile can specify its own paths (per-profile configuration)
 
 #### Duration Types:
 - **frames**: Duration stays as frame count, clamped to min/max
@@ -530,3 +554,17 @@ Successfully implemented verbose terminal output as default behavior:
 3. Add more video generation profiles
 4. Add unit tests for async client
 5. Create README.md documentation
+
+### Code Quality Issues (Pending - 2026-01-18)
+
+#### Files Exceeding Size Limits
+1. **processor.py** - 410 lines (exceeds 400 hard limit from code_quantity_memo.md)
+   - Action: Split into logical modules - extract path validation, job discovery, and matrix processing
+   - Priority: High
+
+2. **estimate_costs.py** - 252 lines (approaching 250 soft limit)
+   - Action: Review and potentially split if growth continues
+   - Priority: Medium
+
+#### Previous Session Bug Fix
+- test_project_display.py: Fixed incorrect import of `_sanitize_for_filename` (was importing from verbose_output.py instead of logging.py)

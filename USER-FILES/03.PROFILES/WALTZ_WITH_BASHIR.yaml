@@ -1,24 +1,32 @@
 # =============================================================================
-# Kling 2.5 Turbo 1080p Video Generation Profile
+# WALTZ WITH BASHIR - Custom Project Profile
+# =============================================================================
+# Project configuration with custom input/output paths
+
+project: "WALTZ WITH BASHIR"
+
+paths:
+  input: "/Users/ruben/Nextcloud/01 - PROJECTS/251230_WBT/02_GENERATIONS/@INPUT(img-to-vid)"
+  output: "/Users/ruben/Nextcloud/01 - PROJECTS/251230_WBT/02_GENERATIONS/"
+
+# =============================================================================
+# Model configuration for Replicate
 # =============================================================================
 
-# Model configuration for Replicate
 Model:
   endpoint: kwaivgi/kling-v2.6
   code-nickname: kling26
+
 # Pricing configuration (Replicate charges per second of compute)
 pricing:
-  # Kling 2.5 Turbo pricing on Replicate
-  cost_per_second: 0.07 # USD per second of compute time
+  cost_per_second: 0.07
 
 # Image URL parameter name mapping
 image_url: start_image
 generate_audio: False
 
 # Optional prompt suffix - will be appended to all prompts for this profile
-# Use this to add consistent phrases/style directions to every video generation
-# Example: "cinematic lighting, high quality"
-prompt_suffix: " Ultra-sharp focus, 4K, 60 fps."
+prompt_suffix: " Ultra-sharp focus, 4K."
 
 # Duration handling
 duration_type: seconds

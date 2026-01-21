@@ -82,13 +82,7 @@ def _setup_processing_hybrid(
 
     # Create output directory
     timestamp = datetime.now().strftime("%y%m%d_%H%M%S")
-    if len(active_profiles) == 1:
-        profile_suffix = (
-            str(active_profiles[0]["name"]).strip().replace("/", "-").replace(" ", "_")
-        )
-        dir_name = f"{timestamp}_{profile_suffix}"
-    else:
-        dir_name = f"{timestamp}_VIDEO"
+    dir_name = f"{timestamp}_IMG-TO-VID"
     run_dir = context.output_dir / dir_name
     run_dir.mkdir(parents=True, exist_ok=True)
     logger.info(f"📁 Output: {run_dir}")

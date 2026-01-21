@@ -1,4 +1,5 @@
 """Profile loading utilities."""
+
 import yaml
 from pathlib import Path
 from typing import Dict, List, Any
@@ -18,81 +19,116 @@ def find_yaml_files(profiles_dir: Path) -> List[Path]:
 
 def load_single_profile(yaml_file: Path) -> Dict[str, Any]:
     """Load and validate a single profile from YAML file."""
-    with open(yaml_file, 'r') as f:
+    with open(yaml_file, "r") as f:
         profile_data = yaml.safe_load(f) or {}
-    
+
     profile_name = yaml_file.stem
     validator = ProfileValidator()
-    
+
     # Validate all sections
     model_section = validator.validate_model_section(profile_data, yaml_file)
     pricing = validator.validate_pricing_section(profile_data, yaml_file)
     duration_config = validator.validate_duration_section(profile_data, yaml_file)
     params = validator.validate_params_section(profile_data, yaml_file)
-    
+
     # Extract optional image_url parameter name (defaults to "image")
-    image_url_param = profile_data.get('image_url', 'image')
-    
+    image_url_param = profile_data.get("image_url", "image")
+
     # Support generate_audio at root level (legacy/convenience support)
-    if 'generate_audio' in profile_data:
-        params['generate_audio'] = profile_data['generate_audio']
-    
+    if "generate_audio" in profile_data:
+        params["generate_audio"] = profile_data["generate_audio"]
+
     # Validate and extract optional prompt modifications
-    prompt_prefix, prompt_suffix = validator.validate_prompt_modifications(profile_data, yaml_file)
+    prompt_prefix, prompt_suffix = validator.validate_prompt_modifications(
+        profile_data, yaml_file
+    )
+
+    # Extract optional project configuration (project name and custom paths)
+    project_name = None
+    custom_input_path = None
+    custom_output_path = None
+
+    if "project" in profile_data:
+        project_config = profile_data["project"]
+        if isinstance(project_config, dict):
+            project_name = project_config.get("name", None)
+        elif isinstance(project_config, str):
+            project_name = project_config
+
+    if "paths" in profile_data:
+        paths_config = profile_data["paths"]
+        if isinstance(paths_config, dict):
+            if "input" in paths_config:
+                custom_input_path = Path(paths_config["input"])
+            if "output" in paths_config:
+                custom_output_path = Path(paths_config["output"])
 
     # Build profile dictionary
     profile = {
         "name": profile_name,
-        "model_id": model_section['endpoint'],
-        "nickname": model_section.get('code-nickname', profile_name),
+        "model_id": model_section["endpoint"],
+        "nickname": model_section.get("code-nickname", profile_name),
         "pricing": pricing,
         "parameters": params,
         "duration_config": duration_config,
         "image_url_param": image_url_param,
         "prompt_prefix": prompt_prefix,
-        "prompt_suffix": prompt_suffix
+        "prompt_suffix": prompt_suffix,
+        "project_name": project_name,
+        "custom_input_path": str(custom_input_path) if custom_input_path else None,
+        "custom_output_path": str(custom_output_path) if custom_output_path else None,
     }
-    
+
     # Log profile loading with prompt modifications if configured
-    logger.info(f"Loaded profile: {profile_name} (endpoint: {model_section['endpoint']})")
-    
+    logger.info(
+        f"Loaded profile: {profile_name} (endpoint: {model_section['endpoint']})"
+    )
+
     # Log prompt modifications if any are configured
     modifications = []
     if prompt_prefix and prompt_prefix.strip():
         modifications.append(f"prefix='{prompt_prefix.strip()}'")
     if prompt_suffix and prompt_suffix.strip():
         modifications.append(f"suffix='{prompt_suffix.strip()}'")
-    
+
     if modifications:
         logger.info(f"  → Prompt modifications: {', '.join(modifications)}")
-    
+
+    # Log project configuration if configured
+    if project_name:
+        logger.info(f"  → Project: {project_name}")
+    if custom_input_path:
+        logger.info(f"  → Custom input: {custom_input_path}")
+    if custom_output_path:
+        logger.info(f"  → Custom output: {custom_output_path}")
+
     return profile
 
 
 def load_active_profiles(profiles_dir: Path) -> List[Dict[str, Any]]:
     """
     Load all active video profiles from YAML files.
-    
+
     Args:
         profiles_dir: Directory containing profile YAML files
-        
+
     Returns:
         List of profile dictionaries with name, model endpoint, pricing, and parameters
-        
+
     Raises:
         FileNotFoundError: If profiles directory doesn't exist
         ProfileValidationError: If no profiles found or invalid format
     """
     if not profiles_dir.exists():
         raise FileNotFoundError(f"Profiles directory not found: {profiles_dir}")
-    
+
     yaml_files = find_yaml_files(profiles_dir)
-    
+
     if not yaml_files:
         raise ProfileValidationError(f"No profile files found in {profiles_dir}")
-    
+
     active_profiles = []
-    
+
     for yaml_file in natsorted(yaml_files):
         try:
             profile = load_single_profile(yaml_file)
@@ -100,9 +136,11 @@ def load_active_profiles(profiles_dir: Path) -> List[Dict[str, Any]]:
         except yaml.YAMLError as e:
             logger.error(f"Invalid YAML in {yaml_file}: {e}")
             raise
-    
+
     if not active_profiles:
-        raise ProfileValidationError("No profiles found. Check your profile files in USER-FILES/03.PROFILES/")
-    
+        raise ProfileValidationError(
+            "No profiles found. Check your profile files in USER-FILES/03.PROFILES/"
+        )
+
     logger.info(f"Loaded {len(active_profiles)} profiles")
     return active_profiles

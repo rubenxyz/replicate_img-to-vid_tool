@@ -15,8 +15,8 @@ class VideoProcessingContext:
     num_frames_file: Path
     profile: Dict[str, Any]
     run_dir: Path
-    progress: Any  # Rich Progress object
-    task_id: int
+    progress: Any  # Rich Progress or alive-progress ProgressBar
+    task_id: Any  # Task ID (int for Rich, str for alive-progress)
 
 
 @dataclass

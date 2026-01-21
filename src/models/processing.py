@@ -1,9 +1,8 @@
 """Processing context models."""
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 from dataclasses import dataclass
-from rich.progress import Progress
 
 from ..api.client import ReplicateClient
 
@@ -16,4 +15,4 @@ class ProcessingContext:
     input_dir: Path
     profiles_dir: Path
     output_dir: Path
-    progress: Optional[Progress] = None
+    progress: Optional[Any] = None

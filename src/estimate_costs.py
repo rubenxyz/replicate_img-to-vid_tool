@@ -150,16 +150,9 @@ def generate_cost_report(
     Returns:
         Path to generated report
     """
-    # Create output directory with timestamp; use active profile as suffix when single profile is active
+    # Create output directory with timestamp
     timestamp = datetime.now().strftime("%y%m%d_%H%M%S")
-    if len(cost_data) == 1:
-        # Sanitize profile name for filesystem
-        profile_suffix = (
-            str(cost_data[0]["profile"]).strip().replace("/", "-").replace(" ", "_")
-        )
-        dir_name = f"{timestamp}_{profile_suffix}"
-    else:
-        dir_name = f"{timestamp}_COST"
+    dir_name = f"{timestamp}_IMG-TO-VID"
     output_dir = OUTPUT_DIR / dir_name
     output_dir.mkdir(parents=True, exist_ok=True)
     report_path = output_dir / "cost_estimate.md"
