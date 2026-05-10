@@ -1,5 +1,6 @@
-"""Authentication module for Replicate API using 1Password only."""
+"""Authentication module - prioritizes .env over 1Password."""
 from typing import Optional
+from .env import get_replicate_api_token_from_env
 from .op_auth import get_replicate_api_token_from_op, AuthError
 
 __all__ = ['authenticate', 'AuthError']
@@ -7,11 +8,11 @@ __all__ = ['authenticate', 'AuthError']
 
 def authenticate(config_name: Optional[str] = None) -> str:
     """
-    Authenticate with Replicate API using 1Password.
+    Authenticate with Replicate API - .env priority over 1Password.
 
-    Discovers USER-FILES/01.CONFIG/auth*.yml/.yaml files and retrieves the
-    Replicate API token from 1Password based on the item_name and field_name
-    specified in the auth config.
+    Priority:
+    1. REPLICATE_API_TOKEN from .env file or environment
+    2. 1Password CLI fallback
 
     Args:
         config_name: Optional specific auth config filename (e.g., 'auth_bites.yaml')
@@ -24,6 +25,10 @@ def authenticate(config_name: Optional[str] = None) -> str:
         ValueError: If no API token can be found
         AuthError: If 1Password authentication fails
     """
+    api_token = get_replicate_api_token_from_env()
+    if api_token:
+        return api_token
+    
     try:
         api_token = get_replicate_api_token_from_op(config_name)
         if api_token:
@@ -33,8 +38,7 @@ def authenticate(config_name: Optional[str] = None) -> str:
         logger.error(f"1Password authentication error: {e}")
         raise
     
-    # No token found in any auth*.yaml
     raise ValueError(
-        "No valid Replicate token found via 1Password. Ensure a USER-FILES/01.CONFIG/auth*.yaml "
-        "exists with 'replicate.item_name' and 'replicate.field_name'."
+        "No valid Replicate token found. Ensure a .env file exists with REPLICATE_API_TOKEN "
+        "or a USER-FILES/01.CONFIG/auth*.yaml exists with 1Password config."
     )
