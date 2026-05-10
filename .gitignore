@@ -64,4 +64,3 @@ logs/*.pyc
 .venv/
 .ruff_cache/
 .pytest_cache/
-USER-FILES/
