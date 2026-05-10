@@ -59,4 +59,9 @@ Thumbs.db
 
 # Logs
 *.log
-logs/
+logs/*.pyc
+.claude/
+.venv/
+.ruff_cache/
+.pytest_cache/
+USER-FILES/
